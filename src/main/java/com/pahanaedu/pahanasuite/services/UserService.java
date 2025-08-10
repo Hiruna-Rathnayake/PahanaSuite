@@ -31,7 +31,12 @@ public class UserService {
      * @return true if registration succeeded, false otherwise
      */
     public boolean register(User user) {
-        // Could add more validation here (e.g., check username uniqueness)
+        // Check if username already exists
+        User existingUser = userDAO.findByUsername(user.getUsername());
+        if (existingUser != null) {
+            return false; // Username taken
+        }
+        // Proceed to create
         return userDAO.createUser(user);
     }
 }

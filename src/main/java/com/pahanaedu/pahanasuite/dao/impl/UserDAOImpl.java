@@ -1,4 +1,3 @@
-// File: src/main/java/com/pahanaedu/pahanasuite/dao/impl/UserDAOImpl.java
 package com.pahanaedu.pahanasuite.dao.impl;
 
 import com.pahanaedu.pahanasuite.dao.UserDAO;
@@ -11,8 +10,10 @@ import java.sql.ResultSet;
 
 public class UserDAOImpl implements UserDAO {
 
-    private static final String SELECT_USER_SQL = "SELECT id, username, password, role, telephone, address FROM users WHERE username = ?";
-    private static final String INSERT_USER_SQL = "INSERT INTO users (username, password, role, telephone, address) VALUES (?, ?, ?, ?, ?)";
+    private static final String SELECT_USER_SQL =
+            "SELECT id, username, password, role FROM users WHERE username = ?";
+    private static final String INSERT_USER_SQL =
+            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
 
     @Override
     public User findByUsername(String username) {
@@ -27,8 +28,6 @@ public class UserDAOImpl implements UserDAO {
                     user.setUsername(rs.getString("username"));
                     user.setPassword(rs.getString("password"));
                     user.setRole(rs.getString("role"));
-                    user.setTelephone(rs.getString("telephone"));
-                    user.setAddress(rs.getString("address"));
                     return user;
                 }
             }
@@ -46,8 +45,6 @@ public class UserDAOImpl implements UserDAO {
             stmt.setString(1, user.getUsername());
             stmt.setString(2, user.getPassword());
             stmt.setString(3, user.getRole());
-            stmt.setString(4, user.getTelephone());
-            stmt.setString(5, user.getAddress());
 
             int rowsInserted = stmt.executeUpdate();
             return rowsInserted > 0;

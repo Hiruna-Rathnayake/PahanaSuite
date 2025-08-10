@@ -13,7 +13,7 @@ public class UserDAOMemoryImpl implements UserDAO {
 
     public UserDAOMemoryImpl() {
         // Preload with a test user (id = 1, role = "customer", telephone and address empty for example)
-        users.put("testuser", new User(1, "testuser", "testpass", "customer", "", ""));
+        users.put("testuser", new User(1, "testuser", "testpass", "customer"));
     }
 
     @Override
