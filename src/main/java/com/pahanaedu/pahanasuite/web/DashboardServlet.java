@@ -6,7 +6,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 
-@WebServlet("/dashboard")
+@WebServlet("/dashboard/*")
 public class DashboardServlet extends HttpServlet {
 
     @Override
@@ -27,44 +27,68 @@ public class DashboardServlet extends HttpServlet {
             return;
         }
 
-        // TODO: In the future, you can add dashboard data here
-        // For example:
-        // req.setAttribute("todaysSales", getSalesForToday());
-        // req.setAttribute("lowStockItems", getLowStockItems());
-        // req.setAttribute("recentSales", getRecentSales());
-        // req.setAttribute("topBooks", getTopSellingBooks());
+        // Set user attributes for JSP
+        req.setAttribute("userRole", user.getRole());
+        req.setAttribute("username", user.getUsername());
+        req.setAttribute("user", user);
 
-        // Forward to dashboard JSP
-        req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
+        // Get section from URL path or parameter
+        String section = getSectionFromRequest(req, user.getRole());
+
+        // Validate section access based on role
+        section = validateSectionAccess(section, user.getRole());
+
+        req.setAttribute("currentSection", section);
+
+        // Route to appropriate JSP
+        String jspPath = "/WEB-INF/views/dashboard/" + section + ".jsp";
+
+        try {
+            req.getRequestDispatcher(jspPath).forward(req, resp);
+        } catch (ServletException e) {
+            // Fallback to overview if section JSP doesn't exist
+            req.getRequestDispatcher("/WEB-INF/views/dashboard/overview.jsp").forward(req, resp);
+        }
+    }
+
+    private String getSectionFromRequest(HttpServletRequest req, String userRole) {
+        // First try to get from URL path
+        String pathInfo = req.getPathInfo();
+        if (pathInfo != null && pathInfo.length() > 1) {
+            return pathInfo.substring(1); // Remove leading slash
+        }
+
+        // Then try from parameter (for backward compatibility)
+        String section = req.getParameter("section");
+        if (section != null) {
+            return section;
+        }
+
+        // Default based on role
+        return "cashier".equals(userRole) ? "sales" : "overview";
+    }
+
+    private String validateSectionAccess(String section, String userRole) {
+        if ("admin".equals(userRole)) {
+            // Admin can access any section
+            return section;
+        }
+
+        if ("cashier".equals(userRole)) {
+            // Cashiers can only access sales and customers
+            if ("sales".equals(section) || "customers".equals(section)) {
+                return section;
+            }
+            return "sales"; // Default for cashiers
+        }
+
+        // Unknown role, default to sales
+        return "sales";
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        // Redirect POST requests to GET
         doGet(req, resp);
     }
-
-    // TODO: Add these methods when you have your DAO layer ready
-    /*
-    private double getSalesForToday() {
-        // Implementation to get today's sales from database
-        return 0.0;
-    }
-
-    private int getLowStockItems() {
-        // Implementation to count low stock items
-        return 0;
-    }
-
-    private List<Sale> getRecentSales() {
-        // Implementation to get recent sales
-        return new ArrayList<>();
-    }
-
-    private List<Book> getTopSellingBooks() {
-        // Implementation to get top selling books
-        return new ArrayList<>();
-    }
-    */
 }
