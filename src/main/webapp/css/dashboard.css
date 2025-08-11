@@ -91,7 +91,7 @@ body {
 /* Main Content */
 .main-content {
     flex: 1;
-    background-color: #fff;
+    background-color: var(--light);
     padding: 1.5rem;
     overflow: auto;
 }
@@ -99,6 +99,31 @@ body {
 .content-wrapper {
     max-width: 1200px;
     margin: 0 auto;
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.data-table th,
+.data-table td {
+    border: 1px solid #ddd;
+    padding: 0.5rem 0.75rem;
+}
+
+.data-table th {
+    background-color: var(--primary);
+    color: #fff;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: var(--light);
 }
 
 /* Footer */

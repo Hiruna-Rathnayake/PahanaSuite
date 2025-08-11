@@ -7,7 +7,6 @@
     User user = (User) request.getAttribute("user");
 
     boolean isAdmin = "admin".equals(userRole);
-    boolean isCashier = "cashier".equals(userRole);
 %>
 <!DOCTYPE html>
 <html lang="en">
