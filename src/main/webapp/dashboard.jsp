@@ -19,26 +19,22 @@
 
 </head>
 <body>
-<!-- Header Component -->
 <jsp:include page="/WEB-INF/views/components/header.jsp" />
 
-<!-- Navigation Component (Admin Only) -->
-<% if (isAdmin) { %>
-<jsp:include page="/WEB-INF/views/components/navigation.jsp" />
-<% } %>
+<div class="dashboard-layout">
+    <% if (isAdmin) { %>
+    <jsp:include page="/WEB-INF/views/components/navigation.jsp" />
+    <% } %>
 
-<!-- Main Content Area -->
-<main class="main-content">
-    <div class="content-wrapper">
-        <!-- This is where individual section content will be loaded -->
-        <jsp:include page="<%= \"/WEB-INF/views/dashboard/\" + currentSection + \".jsp\" %>" />
-    </div>
-</main>
+    <main class="main-content">
+        <div class="content-wrapper">
+            <jsp:include page="<%= "/WEB-INF/views/dashboard/" + currentSection + ".jsp" %>" />
+        </div>
+    </main>
+</div>
 
-<!-- Footer Component -->
 <jsp:include page="/WEB-INF/views/components/footer.jsp" />
 
-<!-- JavaScript -->
 <script src="${pageContext.request.contextPath}/js/dashboard.js"></script>
 </body>
 </html>
