@@ -13,69 +13,67 @@ public class DashboardServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // Check if user is logged in
+        // Check login/session
         HttpSession session = req.getSession(false);
         if (session == null || !Boolean.TRUE.equals(session.getAttribute("isLoggedIn"))) {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
-        // Get user from session
+        // Get user
         User user = (User) session.getAttribute("user");
         if (user == null) {
             resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
-        // Set user attributes for JSP
-        req.setAttribute("userRole", user.getRole());
+        // Common attributes for JSP
+        String role = user.getRole();                   // "admin", "manager", "cashier"
+        req.setAttribute("userRole", role);
         req.setAttribute("username", user.getUsername());
         req.setAttribute("user", user);
 
-        // Get section from URL path or parameter
-        String section = getSectionFromRequest(req, user.getRole());
+        // Determine target section
+        String section = getSectionFromRequest(req, role);
+        section = validateSectionAccess(section, role);
 
-        // Validate section access based on role
-        section = validateSectionAccess(section, user.getRole());
+        // Role-aware layout flag (used by JSP + CSS)
+        boolean hasSidebar = !"cashier".equalsIgnoreCase(role);
 
         req.setAttribute("currentSection", section);
+        req.setAttribute("hasSidebar", hasSidebar);
 
-        // Forward to main dashboard layout which will include the section content
+        // Forward to wrapper (your choice to keep it here)
         req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
     }
 
     private String getSectionFromRequest(HttpServletRequest req, String userRole) {
-        // First try to get from URL path
         String pathInfo = req.getPathInfo();
         if (pathInfo != null && pathInfo.length() > 1) {
-            return pathInfo.substring(1); // Remove leading slash
+            return pathInfo.substring(1); // drop leading "/"
         }
-
-        // Then try from parameter (for backward compatibility)
         String section = req.getParameter("section");
-        if (section != null) {
+        if (section != null && !section.isBlank()) {
             return section;
         }
-
-        // Default based on role
-        return "cashier".equals(userRole) ? "sales" : "overview";
+        return "cashier".equalsIgnoreCase(userRole) ? "sales" : "overview";
     }
 
     private String validateSectionAccess(String section, String userRole) {
-        if ("admin".equals(userRole)) {
-            // Admin can access any section
+        if ("admin".equalsIgnoreCase(userRole) || "manager".equalsIgnoreCase(userRole)) {
             return section;
         }
 
-        if ("cashier".equals(userRole)) {
-            // Cashiers can only access sales and customers
+        if ("cashier".equalsIgnoreCase(userRole)) {
+            // Keep both if you want: sales + customers
+            // If you want SALES ONLY, change to: if ("sales".equals(section)) return "sales";
             if ("sales".equals(section) || "customers".equals(section)) {
                 return section;
             }
-            return "sales"; // Default for cashiers
+            return "sales";
         }
 
-        // Unknown role, default to sales
+        // Unknown role → safest default
         return "sales";
     }
 
