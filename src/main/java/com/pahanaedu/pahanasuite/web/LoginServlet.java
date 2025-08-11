@@ -18,7 +18,7 @@ public class LoginServlet extends HttpServlet {
 
     @Override
     public void init() {
-        UserDAO userDAO = new UserDAOImpl(); // DB-backed DAO
+        UserDAO userDAO = new UserDAOImpl(); // DB-backed DAO (swap to memory impl for testing if needed)
         userService = new UserService(userDAO);
     }
 
@@ -37,12 +37,17 @@ public class LoginServlet extends HttpServlet {
         String username = req.getParameter("username");
         String password = req.getParameter("password");
 
-        User user = userService.login(username, password);
+        User user = userService.login(username, password); // returns sanitized user (no password) on success
 
         if (user != null) {
+            // Kill any existing session to prevent fixation, then create a fresh one
+            HttpSession old = req.getSession(false);
+            if (old != null) old.invalidate();
+
             HttpSession session = req.getSession(true);
-            session.setAttribute("user", user);
             session.setAttribute("isLoggedIn", true);
+            session.setAttribute("user", user);
+            session.setAttribute("userRole", user.getRole());  // <-- critical for UsersServlet
             session.setAttribute("lastActivity", System.currentTimeMillis());
 
             resp.sendRedirect(req.getContextPath() + "/dashboard");
