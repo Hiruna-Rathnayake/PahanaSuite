@@ -40,15 +40,8 @@ public class DashboardServlet extends HttpServlet {
 
         req.setAttribute("currentSection", section);
 
-        // Route to appropriate JSP
-        String jspPath = "/WEB-INF/views/dashboard/" + section + ".jsp";
-
-        try {
-            req.getRequestDispatcher(jspPath).forward(req, resp);
-        } catch (ServletException e) {
-            // Fallback to overview if section JSP doesn't exist
-            req.getRequestDispatcher("/WEB-INF/views/dashboard/overview.jsp").forward(req, resp);
-        }
+        // Forward to main dashboard layout which will include the section content
+        req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
     }
 
     private String getSectionFromRequest(HttpServletRequest req, String userRole) {
