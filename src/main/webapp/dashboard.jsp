@@ -27,7 +27,7 @@
 
     <main class="main-content">
         <div class="content-wrapper">
-            <jsp:include page="<%= "/WEB-INF/views/dashboard/" + currentSection + ".jsp" %>" />
+            <jsp:include page="/WEB-INF/views/dashboard/${currentSection}.jsp" />
         </div>
     </main>
 </div>
