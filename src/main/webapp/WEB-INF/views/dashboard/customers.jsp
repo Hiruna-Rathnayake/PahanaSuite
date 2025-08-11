@@ -1,3 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<h2>Customer Accounts</h2>
-<p>Register and manage customer details here.</p>
+<section>
+    <h2>Customers</h2>
+    <p>Customer management content coming soon.</p>
+</section>
