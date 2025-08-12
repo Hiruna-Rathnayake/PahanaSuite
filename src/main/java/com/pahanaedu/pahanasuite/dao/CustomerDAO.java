@@ -1,10 +1,14 @@
 package com.pahanaedu.pahanasuite.dao;
 
 import com.pahanaedu.pahanasuite.models.Customer;
+import java.util.List;
 
 public interface CustomerDAO {
     Customer findById(int id);
-    boolean createCustomer(Customer customer);
+    Customer findByAccountNumber(String accountNumber);
+    List<Customer> findAll();
+
+    Customer createCustomer(Customer customer);
     boolean updateCustomer(Customer customer);
-    // Add other customer-specific methods as needed
+    boolean deleteCustomer(int id);
 }

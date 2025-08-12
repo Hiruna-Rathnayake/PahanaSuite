@@ -3,8 +3,15 @@ package com.pahanaedu.pahanasuite.web;
 import com.pahanaedu.pahanasuite.dao.impl.UserDAOImpl;
 // For quick testing without DB swap the DAO:
 // import com.pahanaedu.pahanasuite.dao.impl.UserDAOMemoryImpl;
+
+import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOImpl;
+// For quick testing without DB:
+// import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOMemoryImpl;
+
 import com.pahanaedu.pahanasuite.models.User;
 import com.pahanaedu.pahanasuite.services.UserService;
+import com.pahanaedu.pahanasuite.services.CustomerService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -18,18 +25,21 @@ import java.io.IOException;
 public class DashboardServlet extends HttpServlet {
 
     private UserService userService;
+    private CustomerService customerService;
 
     @Override
     public void init() {
-        // Make sure this matches what UsersServlet uses (both JDBC or both Memory)
+        // Make sure these match (both JDBC or both Memory)
         userService = new UserService(new UserDAOImpl());
-        // userService = new UserService(new UserDAOMemoryImpl()); // <-- uncomment for memory testing
+        // userService = new UserService(new UserDAOMemoryImpl());
+
+        customerService = new CustomerService(new CustomerDAOImpl());
+        // customerService = new CustomerService(new CustomerDAOMemoryImpl());
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-
 
         // Session / auth
         HttpSession session = req.getSession(false);
@@ -57,24 +67,26 @@ public class DashboardServlet extends HttpServlet {
 
         // Load data needed for the section
         if ("users".equalsIgnoreCase(section)) {
-            var list = userService.listAll();
-            req.setAttribute("users", list);
+            req.setAttribute("users", userService.listAll());
+        } else if ("customers".equalsIgnoreCase(section)) {
+            req.setAttribute("customers", customerService.listAll());   // <-- key line
         }
+        // (for sales/settings data, follow the same pattern.)
 
-        // Layout flag for sidebar
+        // Sidebar layout flag
         boolean hasSidebar = !"cashier".equalsIgnoreCase(role);
         req.setAttribute("currentSection", section);
         req.setAttribute("hasSidebar", hasSidebar);
 
+        // Flash message (from POST-redirect)
         Object flash = session.getAttribute("flash");
         if (flash != null) {
             req.setAttribute("flash", String.valueOf(flash));
             session.removeAttribute("flash");
         }
 
-        // Forward to the wrapper under WEB-INF
+        // Forward to the wrapper at webapp root
         req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
-
     }
 
     private String getSectionFromRequest(HttpServletRequest req, String userRole) {

@@ -4,36 +4,33 @@ import com.pahanaedu.pahanasuite.dao.CustomerDAO;
 import com.pahanaedu.pahanasuite.dao.DBConnectionFactory;
 import com.pahanaedu.pahanasuite.models.Customer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CustomerDAOImpl implements CustomerDAO {
 
-    private static final String SELECT_CUSTOMER_SQL =
+    private static final String SELECT_BY_ID =
             "SELECT id, account_number, name, address, telephone, units_consumed FROM customers WHERE id = ?";
-    private static final String INSERT_CUSTOMER_SQL =
+    private static final String SELECT_BY_ACC =
+            "SELECT id, account_number, name, address, telephone, units_consumed FROM customers WHERE account_number = ?";
+    private static final String SELECT_ALL =
+            "SELECT id, account_number, name, address, telephone, units_consumed FROM customers ORDER BY id";
+    private static final String INSERT_CUSTOMER =
             "INSERT INTO customers (account_number, name, address, telephone, units_consumed) VALUES (?, ?, ?, ?, ?)";
-    private static final String UPDATE_CUSTOMER_SQL =
+    private static final String UPDATE_CUSTOMER =
             "UPDATE customers SET account_number = ?, name = ?, address = ?, telephone = ?, units_consumed = ? WHERE id = ?";
+    private static final String DELETE_CUSTOMER =
+            "DELETE FROM customers WHERE id = ?";
 
     @Override
     public Customer findById(int id) {
         try (Connection conn = DBConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(SELECT_CUSTOMER_SQL)) {
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_ID)) {
 
-            stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    Customer customer = new Customer();
-                    customer.setId(rs.getInt("id"));
-                    customer.setAccountNumber(rs.getString("account_number"));
-                    customer.setName(rs.getString("name"));
-                    customer.setAddress(rs.getString("address"));
-                    customer.setTelephone(rs.getString("telephone"));
-                    customer.setUnitsConsumed(rs.getInt("units_consumed"));
-                    return customer;
-                }
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return map(rs);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -42,19 +39,71 @@ public class CustomerDAOImpl implements CustomerDAO {
     }
 
     @Override
-    public boolean createCustomer(Customer customer) {
+    public Customer findByAccountNumber(String accountNumber) {
         try (Connection conn = DBConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(INSERT_CUSTOMER_SQL)) {
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_ACC)) {
 
-            stmt.setString(1, customer.getAccountNumber());
-            stmt.setString(2, customer.getName());
-            stmt.setString(3, customer.getAddress());
-            stmt.setString(4, customer.getTelephone());
-            stmt.setInt(5, customer.getUnitsConsumed());
+            ps.setString(1, accountNumber);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return map(rs);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
-            int rowsInserted = stmt.executeUpdate();
-            return rowsInserted > 0;
+    @Override
+    public List<Customer> findAll() {
+        List<Customer> list = new ArrayList<>();
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_ALL);
+             ResultSet rs = ps.executeQuery()) {
 
+            while (rs.next()) list.add(map(rs));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    @Override
+    public Customer createCustomer(Customer customer) {
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(INSERT_CUSTOMER, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setString(1, customer.getAccountNumber());
+            ps.setString(2, customer.getName());
+            ps.setString(3, customer.getAddress());
+            ps.setString(4, customer.getTelephone());
+            ps.setInt(5, customer.getUnitsConsumed());
+
+            int n = ps.executeUpdate();
+            if (n > 0) {
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) customer.setId(keys.getInt(1));
+                }
+                return scrub(customer);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean updateCustomer(Customer customer) {
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(UPDATE_CUSTOMER)) {
+
+            ps.setString(1, customer.getAccountNumber());
+            ps.setString(2, customer.getName());
+            ps.setString(3, customer.getAddress());
+            ps.setString(4, customer.getTelephone());
+            ps.setInt(5, customer.getUnitsConsumed());
+            ps.setInt(6, customer.getId());
+
+            return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -62,23 +111,33 @@ public class CustomerDAOImpl implements CustomerDAO {
     }
 
     @Override
-    public boolean updateCustomer(Customer customer) {
+    public boolean deleteCustomer(int id) {
         try (Connection conn = DBConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(UPDATE_CUSTOMER_SQL)) {
+             PreparedStatement ps = conn.prepareStatement(DELETE_CUSTOMER)) {
 
-            stmt.setString(1, customer.getAccountNumber());
-            stmt.setString(2, customer.getName());
-            stmt.setString(3, customer.getAddress());
-            stmt.setString(4, customer.getTelephone());
-            stmt.setInt(5, customer.getUnitsConsumed());
-            stmt.setInt(6, customer.getId());
-
-            int rowsUpdated = stmt.executeUpdate();
-            return rowsUpdated > 0;
-
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
+    }
+
+    // -- helpers --
+
+    private static Customer map(ResultSet rs) throws SQLException {
+        Customer c = new Customer();
+        c.setId(rs.getInt("id"));
+        c.setAccountNumber(rs.getString("account_number"));
+        c.setName(rs.getString("name"));
+        c.setAddress(rs.getString("address"));
+        c.setTelephone(rs.getString("telephone"));
+        c.setUnitsConsumed(rs.getInt("units_consumed"));
+        return scrub(c);
+    }
+
+    // TO DO
+    private static Customer scrub(Customer c) {
+        return c; // nothing to scrub right now
     }
 }
