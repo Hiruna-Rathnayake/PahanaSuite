@@ -10,6 +10,8 @@
                href="${pageContext.request.contextPath}/dashboard/users">Users</a></li>
         <li><a class="<%= "customers".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/customers">Customers</a></li>
+        <li><a class="<%= "items".equals(currentSection) ? "active" : "" %>"
+               href="${pageContext.request.contextPath}/dashboard/items">Items</a></li>
         <li><a class="<%= "sales".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/sales">Billing</a></li>
         <li><a class="<%= "settings".equals(currentSection) ? "active" : "" %>"

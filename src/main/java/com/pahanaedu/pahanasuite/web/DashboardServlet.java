@@ -9,8 +9,12 @@ import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOImpl;
 // import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOMemoryImpl;
 
 import com.pahanaedu.pahanasuite.models.User;
+import com.pahanaedu.pahanasuite.services.ItemService;
 import com.pahanaedu.pahanasuite.services.UserService;
 import com.pahanaedu.pahanasuite.services.CustomerService;
+import com.pahanaedu.pahanasuite.dao.impl.ItemDAOImpl;
+
+
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -26,6 +30,7 @@ public class DashboardServlet extends HttpServlet {
 
     private UserService userService;
     private CustomerService customerService;
+    private ItemService itemService;
 
     @Override
     public void init() {
@@ -35,6 +40,7 @@ public class DashboardServlet extends HttpServlet {
 
         customerService = new CustomerService(new CustomerDAOImpl());
         // customerService = new CustomerService(new CustomerDAOMemoryImpl());
+        itemService = new ItemService(new ItemDAOImpl());
     }
 
     @Override
@@ -70,6 +76,10 @@ public class DashboardServlet extends HttpServlet {
             req.setAttribute("users", userService.listAll());
         } else if ("customers".equalsIgnoreCase(section)) {
             req.setAttribute("customers", customerService.listAll());   // <-- key line
+        } else if ("items".equalsIgnoreCase(section)) {
+            String q = req.getParameter("q");
+            String cat = req.getParameter("category");
+            req.setAttribute("items", itemService.search(q, cat, 100, 0));
         }
         // (for sales/settings data, follow the same pattern.)
 
