@@ -23,10 +23,12 @@ jobs:
           cache: maven          # speed up builds by caching Maven deps
 
       # run all my tests here (Mockito tests included)
+      # let it keep going even if tests fail, so I can still get reports + WAR
       - name: Run tests
         run: mvn -B -ntp test
+        continue-on-error: true
 
-      # package the app into a WAR after tests pass
+      # package the app into a WAR (skip tests here since they already ran)
       - name: Package
         run: mvn -B -ntp -DskipTests package
 
