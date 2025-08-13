@@ -1,0 +1,48 @@
+name: Pahana CI
+
+on:
+  push:
+    branches: [ "**" ]          # run this thing on any branch I push to
+  pull_request:                 # also run it when a PR is opened
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest      # using GitHub's free Linux runner
+
+    steps:
+      # grab my project files from GitHub
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # make sure Java is installed (Temurin = free OpenJDK)
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"    # stick to the version my project needs
+          cache: maven          # speed up builds by caching Maven deps
+
+      # run all my tests here (Mockito tests included)
+      - name: Run tests
+        run: mvn -B -ntp test
+
+      # package the app into a WAR after tests pass
+      - name: Package
+        run: mvn -B -ntp -DskipTests package
+
+      # save the test reports so I can screenshot them for the report
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()                     # even if tests fail, keep the reports
+        with:
+          name: surefire-reports
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+
+      # save the built WAR so I can download it or deploy it
+      - name: Upload WAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: pahana-edu-war
+          path: target/*.war
