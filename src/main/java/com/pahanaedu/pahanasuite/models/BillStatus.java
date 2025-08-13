@@ -1,4 +1,3 @@
-// File: BillStatus.java
 package com.pahanaedu.pahanasuite.models;
 
 /** Minimal enum so tests can compile. */
