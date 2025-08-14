@@ -1,15 +1,17 @@
+// src/main/java/com/pahanaedu/pahanasuite/models/Bill.java
 package com.pahanaedu.pahanasuite.models;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Bill {
 
-    // Defaults
     private BillStatus status = BillStatus.ISSUED;
 
-    // Money always stored at scale=2
+    // Money normalized to 2 dp
     private BigDecimal subtotal       = nz(BigDecimal.ZERO);
     private BigDecimal discountAmount = nz(BigDecimal.ZERO);
     private BigDecimal taxAmount      = nz(BigDecimal.ZERO);
@@ -18,15 +20,44 @@ public class Bill {
     private LocalDateTime issuedAt;
     private LocalDateTime dueAt;
 
-    // --- getters/setters ---
-    public BillStatus getStatus() { return status; }
+    // For factories/tests that expect these
+    private String billNo;
+    private int customerId;
 
+    // --- NEW: line items are part of the bill aggregate ---
+    private final List<BillLine> lines = new ArrayList<>();
+
+    // --- getters/setters (existing + these two) ---
+    public String getBillNo() { return billNo; }
+    public void setBillNo(String billNo) { this.billNo = billNo; }
+
+    public int getCustomerId() { return customerId; }
+    public void setCustomerId(int customerId) { this.customerId = customerId; }
+
+    public List<BillLine> getLines() { return lines; }
+
+    /** Adds a line, keeping null safety, then recomputes totals. */
+    public void addLine(BillLine line) {
+        if (line == null) return;
+        line.computeTotals();        // ensure the line has its own math up to date
+        lines.add(line);
+        recomputeTotals();           // keep header numbers consistent
+    }
+
+    /** Removes a line if present, then recomputes totals. */
+    public void removeLine(BillLine line) {
+        if (line == null) return;
+        lines.remove(line);
+        recomputeTotals();
+    }
+
+    // ... existing status/time getters/setters remain unchanged ...
+
+    public BillStatus getStatus() { return status; }
     public void setStatus(BillStatus next) {
-        // Terminal rule: once CANCELLED, no other transitions allowed
         if (this.status == BillStatus.CANCELLED && next != BillStatus.CANCELLED) {
             throw new IllegalStateException("Bill is CANCELLED and cannot change state");
         }
-        // Null safety: treat null as ISSUED
         this.status = (next == null) ? BillStatus.ISSUED : next;
     }
 
@@ -48,14 +79,24 @@ public class Bill {
     public LocalDateTime getDueAt() { return dueAt; }
     public void setDueAt(LocalDateTime dueAt) { this.dueAt = dueAt; }
 
-    /** total = max(0.00, subtotal - discountAmount + taxAmount), normalized to 2 dp */
+    /**
+     * Recomputes header totals from current lines and invoice-level adjustments.
+     * subtotal = Σ(lineTotal), total = max(0.00, subtotal - discount + tax).
+     */
     public void recomputeTotals() {
+        BigDecimal sum = BigDecimal.ZERO;
+        for (BillLine l : lines) {
+            // defensive refresh, in case a caller changed qty/price without re-calc
+            l.computeTotals();
+            sum = sum.add(l.getLineTotal());
+        }
+        this.subtotal = nz(sum);
+
         BigDecimal net = subtotal.subtract(discountAmount).add(taxAmount);
         if (net.signum() < 0) net = BigDecimal.ZERO;
-        this.total = nz(net); // guarantees 0.00, not 0
+        this.total = nz(net);
     }
 
-    /** Null-safe, enforce scale=2 across all money fields */
     private static BigDecimal nz(BigDecimal v) {
         return (v == null ? BigDecimal.ZERO : v).setScale(2, RoundingMode.HALF_UP);
     }

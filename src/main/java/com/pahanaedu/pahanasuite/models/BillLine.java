@@ -1,6 +1,7 @@
 package com.pahanaedu.pahanasuite.models;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,9 +15,9 @@ public class BillLine {
     private String name;
 
     private int quantity; // clamped >= 0
-    private BigDecimal unitPrice   = BigDecimal.ZERO;
-    private BigDecimal lineDiscount= BigDecimal.ZERO;
-    private BigDecimal lineTotal   = BigDecimal.ZERO;
+    private BigDecimal unitPrice    = nz(BigDecimal.ZERO);
+    private BigDecimal lineDiscount = nz(BigDecimal.ZERO);
+    private BigDecimal lineTotal    = nz(BigDecimal.ZERO);
 
     private Map<String, Object> attributes = new HashMap<>(); // never null
 
@@ -53,13 +54,15 @@ public class BillLine {
         this.attributes = (attributes == null) ? new HashMap<>() : attributes;
     }
 
-    /** lineTotal = max(0, quantity * unitPrice - lineDiscount) */
+    /** lineTotal = max(0.00, quantity * unitPrice - lineDiscount), normalized to 2 dp */
     public void computeTotals() {
         BigDecimal gross = unitPrice.multiply(new BigDecimal(quantity));
         BigDecimal net = gross.subtract(lineDiscount);
         if (net.signum() < 0) net = BigDecimal.ZERO;
-        this.lineTotal = net.setScale(2, BigDecimal.ROUND_UNNECESSARY); // “.00” for assertions
+        this.lineTotal = nz(net);
     }
 
-    private static BigDecimal nz(BigDecimal v) { return (v == null) ? BigDecimal.ZERO : v; }
+    private static BigDecimal nz(BigDecimal v) {
+        return (v == null ? BigDecimal.ZERO : v).setScale(2, RoundingMode.HALF_UP);
+    }
 }
