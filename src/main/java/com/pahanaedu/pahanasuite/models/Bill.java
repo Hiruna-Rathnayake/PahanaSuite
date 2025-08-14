@@ -24,6 +24,12 @@ public class Bill {
     private String billNo;
     private int customerId;
 
+    // in Bill.java (fields + getters/setters)
+    private int id;
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+
     // --- NEW: line items are part of the bill aggregate ---
     private final List<BillLine> lines = new ArrayList<>();
 

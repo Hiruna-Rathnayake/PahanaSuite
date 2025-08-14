@@ -1,0 +1,154 @@
+package com.pahanaedu.pahanasuite.dao.impl;
+
+import com.pahanaedu.pahanasuite.dao.DBConnectionFactory;
+import com.pahanaedu.pahanasuite.models.*;
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+
+import java.math.BigDecimal;
+import java.sql.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+class BillDAOImplTest {
+
+    private static BigDecimal bd(String v) { return new BigDecimal(v); }
+
+    @Test
+    void findById_returnsBillWithLines() throws Exception {
+        // --- Mocks ---
+        Connection conn = mock(Connection.class);
+
+        PreparedStatement psBill = mock(PreparedStatement.class);
+        ResultSet rsBill = mock(ResultSet.class);
+
+        PreparedStatement psLines = mock(PreparedStatement.class);
+        ResultSet rsLines = mock(ResultSet.class);
+
+        // prepare two different statements
+        when(conn.prepareStatement(startsWith("SELECT id, bill_no"))).thenReturn(psBill);
+        when(conn.prepareStatement(startsWith("SELECT id, item_id"))).thenReturn(psLines);
+
+        // bill row
+        when(psBill.executeQuery()).thenReturn(rsBill);
+        when(rsBill.next()).thenReturn(true);
+        when(rsBill.getInt("id")).thenReturn(5);
+        when(rsBill.getString("bill_no")).thenReturn("INV-20250814-120000-0001");
+        when(rsBill.getInt("customer_id")).thenReturn(99);
+        when(rsBill.getTimestamp("issued_at")).thenReturn(Timestamp.valueOf(java.time.LocalDateTime.now()));
+        when(rsBill.getTimestamp("due_at")).thenReturn(null);
+        when(rsBill.getString("status")).thenReturn(BillStatus.ISSUED.name());
+        when(rsBill.getBigDecimal("subtotal")).thenReturn(bd("2150.00"));
+        when(rsBill.getBigDecimal("discount_amount")).thenReturn(bd("100.00"));
+        when(rsBill.getBigDecimal("tax_amount")).thenReturn(bd("50.00"));
+        when(rsBill.getBigDecimal("total")).thenReturn(bd("2050.00"));
+
+        // two line rows
+        when(psLines.executeQuery()).thenReturn(rsLines);
+        when(rsLines.next()).thenReturn(true, true, false);
+        // line 1
+        when(rsLines.getInt("id")).thenReturn(21, 22); // first call -> 21, second call (line2) -> 22
+        when(rsLines.getInt("item_id")).thenReturn(1, 2);
+        when(rsLines.wasNull()).thenReturn(false, false);
+        when(rsLines.getString("sku")).thenReturn("BK-001", "ST-010");
+        when(rsLines.getString("name")).thenReturn("Algorithms", "Pen");
+        when(rsLines.getInt("quantity")).thenReturn(2, 3);
+        when(rsLines.getBigDecimal("unit_price")).thenReturn(bd("1000.00"), bd("50.00"));
+        when(rsLines.getBigDecimal("line_discount")).thenReturn(bd("0.00"), bd("0.00"));
+        when(rsLines.getBigDecimal("line_total")).thenReturn(bd("2000.00"), bd("150.00"));
+
+        try (MockedStatic<DBConnectionFactory> mocked = mockStatic(DBConnectionFactory.class)) {
+            mocked.when(DBConnectionFactory::getConnection).thenReturn(conn);
+
+            BillDAOImpl dao = new BillDAOImpl();
+            Bill bill = dao.findById(5);
+
+            assertNotNull(bill);
+            assertEquals(5, bill.getId());
+            assertEquals("INV-20250814-120000-0001", bill.getBillNo());
+            assertEquals(99, bill.getCustomerId());
+            assertEquals(bd("2150.00"), bill.getSubtotal());
+            assertEquals(bd("2050.00"), bill.getTotal());
+
+            assertEquals(2, bill.getLines().size());
+            assertEquals("BK-001", bill.getLines().get(0).getSku());
+            assertEquals(bd("2000.00"), bill.getLines().get(0).getLineTotal());
+
+            // light verification that the right SQLs were prepared
+            verify(conn, atLeastOnce()).prepareStatement(startsWith("SELECT id, bill_no"));
+            verify(conn, atLeastOnce()).prepareStatement(startsWith("SELECT id, item_id"));
+        }
+    }
+
+    @Test
+    void createBill_insertsHeaderAndLines_setsIds() throws Exception {
+        // --- Mocks ---
+        Connection conn = mock(Connection.class);
+        when(conn.getAutoCommit()).thenReturn(true); // for TX toggling
+
+        // header insert
+        PreparedStatement psInsertBill = mock(PreparedStatement.class);
+        when(conn.prepareStatement(startsWith("INSERT INTO bills"), anyInt())).thenReturn(psInsertBill);
+        when(psInsertBill.executeUpdate()).thenReturn(1);
+
+        ResultSet billKeys = mock(ResultSet.class);
+        when(psInsertBill.getGeneratedKeys()).thenReturn(billKeys);
+        when(billKeys.next()).thenReturn(true);
+        when(billKeys.getInt(1)).thenReturn(101);
+
+        // line insert
+        PreparedStatement psInsertLine = mock(PreparedStatement.class);
+        when(conn.prepareStatement(startsWith("INSERT INTO bill_lines"), anyInt())).thenReturn(psInsertLine);
+        when(psInsertLine.executeUpdate()).thenReturn(1);
+
+        // two line keys
+        ResultSet lineKeys = mock(ResultSet.class);
+        when(psInsertLine.getGeneratedKeys()).thenReturn(lineKeys);
+        when(lineKeys.next()).thenReturn(true, true, false);
+        when(lineKeys.getInt(1)).thenReturn(201, 202);
+
+        try (MockedStatic<DBConnectionFactory> mocked = mockStatic(DBConnectionFactory.class)) {
+            mocked.when(DBConnectionFactory::getConnection).thenReturn(conn);
+
+            // Build a bill object like real code would
+            Bill bill = new Bill();
+            bill.setBillNo("INV-20250814-120500-0002");
+            bill.setCustomerId(77);
+            bill.setStatus(BillStatus.ISSUED);
+
+            BillLine l1 = new BillLine();
+            l1.setItemId(1); l1.setSku("BK-001"); l1.setName("Algorithms");
+            l1.setQuantity(2); l1.setUnitPrice(bd("1000.00")); l1.computeTotals(); // 2000
+
+            BillLine l2 = new BillLine();
+            l2.setItemId(2); l2.setSku("ST-010"); l2.setName("Pen");
+            l2.setQuantity(3); l2.setUnitPrice(bd("50.00")); l2.computeTotals();   // 150
+
+            bill.addLine(l1);
+            bill.addLine(l2);
+            bill.setDiscountAmount(bd("100.00"));
+            bill.setTaxAmount(bd("50.00"));
+            bill.recomputeTotals(); // subtotal 2150, total 2050
+
+            BillDAOImpl dao = new BillDAOImpl();
+            Bill created = dao.createBill(bill);
+
+            assertNotNull(created);
+            assertEquals(101, created.getId());
+            assertEquals(201, created.getLines().get(0).getId());
+            assertEquals(202, created.getLines().get(1).getId());
+            assertEquals(bd("2150.00"), created.getSubtotal());
+            assertEquals(bd("2050.00"), created.getTotal());
+
+            // verify transaction boundaries & param binding on header
+            verify(conn).setAutoCommit(false);
+            verify(psInsertBill).setString(eq(1), eq("INV-20250814-120500-0002"));
+            verify(psInsertBill).setInt(eq(2), eq(77));
+            verify(psInsertBill).setString(eq(5), eq(BillStatus.ISSUED.name()));
+            verify(conn).commit();
+            verify(conn).setAutoCommit(true);
+        }
+    }
+}

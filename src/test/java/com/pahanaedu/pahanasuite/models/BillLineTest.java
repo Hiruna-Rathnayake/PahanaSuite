@@ -3,6 +3,7 @@ package com.pahanaedu.pahanasuite.models;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,7 +14,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class BillLineTest {
 
-    private static BigDecimal bd(String v) { return new BigDecimal(v); }
+    private static BigDecimal bd(String v) {
+        return new BigDecimal(v).setScale(2, RoundingMode.HALF_UP);
+    }
 
     @Test
     void computeTotals_basic() {
@@ -51,9 +54,9 @@ class BillLineTest {
         line.setLineTotal(null);
         line.setAttributes(null);
 
-        assertEquals(bd("0"), line.getUnitPrice(), "Unit price should default to 0");
-        assertEquals(bd("0"), line.getLineDiscount(), "Line discount should default to 0");
-        assertEquals(bd("0"), line.getLineTotal(), "Line total should default to 0");
+        assertEquals(bd("0.00"), line.getUnitPrice(), "Unit price should default to 0.00");
+        assertEquals(bd("0.00"), line.getLineDiscount(), "Line discount should default to 0.00");
+        assertEquals(bd("0.00"), line.getLineTotal(), "Line total should default to 0.00");
         assertNotNull(line.getAttributes(), "Attributes map should be non-null");
         assertTrue(line.getAttributes().isEmpty(), "Attributes should start empty");
     }
