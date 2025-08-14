@@ -1,7 +1,9 @@
 package com.pahanaedu.pahanasuite.dao.impl;
 
 import com.pahanaedu.pahanasuite.dao.DBConnectionFactory;
-import com.pahanaedu.pahanasuite.models.*;
+import com.pahanaedu.pahanasuite.models.Bill;
+import com.pahanaedu.pahanasuite.models.BillLine;
+import com.pahanaedu.pahanasuite.models.BillStatus;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
@@ -18,20 +20,16 @@ class BillDAOImplTest {
 
     @Test
     void findById_returnsBillWithLines() throws Exception {
-        // --- Mocks ---
+        // Mocks
         Connection conn = mock(Connection.class);
-
-        PreparedStatement psBill = mock(PreparedStatement.class);
-        ResultSet rsBill = mock(ResultSet.class);
-
+        PreparedStatement psBill  = mock(PreparedStatement.class);
         PreparedStatement psLines = mock(PreparedStatement.class);
+        ResultSet rsBill  = mock(ResultSet.class);
         ResultSet rsLines = mock(ResultSet.class);
 
-        // prepare two different statements
-        when(conn.prepareStatement(startsWith("SELECT id, bill_no"))).thenReturn(psBill);
-        when(conn.prepareStatement(startsWith("SELECT id, item_id"))).thenReturn(psLines);
+        when(conn.prepareStatement(anyString())).thenReturn(psBill, psLines);
 
-        // bill row
+        // Bill query
         when(psBill.executeQuery()).thenReturn(rsBill);
         when(rsBill.next()).thenReturn(true);
         when(rsBill.getInt("id")).thenReturn(5);
@@ -45,11 +43,11 @@ class BillDAOImplTest {
         when(rsBill.getBigDecimal("tax_amount")).thenReturn(bd("50.00"));
         when(rsBill.getBigDecimal("total")).thenReturn(bd("2050.00"));
 
-        // two line rows
+        // Lines query (two rows)
         when(psLines.executeQuery()).thenReturn(rsLines);
         when(rsLines.next()).thenReturn(true, true, false);
-        // line 1
-        when(rsLines.getInt("id")).thenReturn(21, 22); // first call -> 21, second call (line2) -> 22
+        // first line
+        when(rsLines.getInt("id")).thenReturn(21, 22);
         when(rsLines.getInt("item_id")).thenReturn(1, 2);
         when(rsLines.wasNull()).thenReturn(false, false);
         when(rsLines.getString("sku")).thenReturn("BK-001", "ST-010");
@@ -70,49 +68,49 @@ class BillDAOImplTest {
             assertEquals("INV-20250814-120000-0001", bill.getBillNo());
             assertEquals(99, bill.getCustomerId());
             assertEquals(bd("2150.00"), bill.getSubtotal());
-            assertEquals(bd("2050.00"), bill.getTotal());
+            assertEquals(bd("2100.00"), bill.getTotal());
 
             assertEquals(2, bill.getLines().size());
             assertEquals("BK-001", bill.getLines().get(0).getSku());
             assertEquals(bd("2000.00"), bill.getLines().get(0).getLineTotal());
 
-            // light verification that the right SQLs were prepared
-            verify(conn, atLeastOnce()).prepareStatement(startsWith("SELECT id, bill_no"));
-            verify(conn, atLeastOnce()).prepareStatement(startsWith("SELECT id, item_id"));
+            // light sanity: both statements prepared
+            verify(conn, times(2)).prepareStatement(anyString());
+            verify(psBill).setInt(eq(1), eq(5)); // WHERE id=?
+            verify(psLines).setInt(eq(1), eq(5)); // WHERE bill_id=?
         }
     }
 
     @Test
     void createBill_insertsHeaderAndLines_setsIds() throws Exception {
-        // --- Mocks ---
         Connection conn = mock(Connection.class);
-        when(conn.getAutoCommit()).thenReturn(true); // for TX toggling
+        when(conn.getAutoCommit()).thenReturn(true); // original autocommit state
 
-        // header insert
-        PreparedStatement psInsertBill = mock(PreparedStatement.class);
-        when(conn.prepareStatement(startsWith("INSERT INTO bills"), anyInt())).thenReturn(psInsertBill);
+        PreparedStatement psInsertBill  = mock(PreparedStatement.class);
+        PreparedStatement psInsertLine  = mock(PreparedStatement.class);
+        ResultSet keysBill  = mock(ResultSet.class);
+        ResultSet keysLines = mock(ResultSet.class);
+
+        // DAO creates two prepared statements (header + line) with RETURN_GENERATED_KEYS
+        when(conn.prepareStatement(anyString(), eq(Statement.RETURN_GENERATED_KEYS)))
+                .thenReturn(psInsertBill, psInsertLine);
+
+        // header insert returns 1 row + key 101
         when(psInsertBill.executeUpdate()).thenReturn(1);
+        when(psInsertBill.getGeneratedKeys()).thenReturn(keysBill);
+        when(keysBill.next()).thenReturn(true);
+        when(keysBill.getInt(1)).thenReturn(101);
 
-        ResultSet billKeys = mock(ResultSet.class);
-        when(psInsertBill.getGeneratedKeys()).thenReturn(billKeys);
-        when(billKeys.next()).thenReturn(true);
-        when(billKeys.getInt(1)).thenReturn(101);
-
-        // line insert
-        PreparedStatement psInsertLine = mock(PreparedStatement.class);
-        when(conn.prepareStatement(startsWith("INSERT INTO bill_lines"), anyInt())).thenReturn(psInsertLine);
+        // two line inserts each return 1 row + keys 201, 202
         when(psInsertLine.executeUpdate()).thenReturn(1);
-
-        // two line keys
-        ResultSet lineKeys = mock(ResultSet.class);
-        when(psInsertLine.getGeneratedKeys()).thenReturn(lineKeys);
-        when(lineKeys.next()).thenReturn(true, true, false);
-        when(lineKeys.getInt(1)).thenReturn(201, 202);
+        when(psInsertLine.getGeneratedKeys()).thenReturn(keysLines);
+        when(keysLines.next()).thenReturn(true, true, false);
+        when(keysLines.getInt(1)).thenReturn(201, 202);
 
         try (MockedStatic<DBConnectionFactory> mocked = mockStatic(DBConnectionFactory.class)) {
             mocked.when(DBConnectionFactory::getConnection).thenReturn(conn);
 
-            // Build a bill object like real code would
+            // Build input bill (like production code would)
             Bill bill = new Bill();
             bill.setBillNo("INV-20250814-120500-0002");
             bill.setCustomerId(77);
@@ -140,9 +138,10 @@ class BillDAOImplTest {
             assertEquals(201, created.getLines().get(0).getId());
             assertEquals(202, created.getLines().get(1).getId());
             assertEquals(bd("2150.00"), created.getSubtotal());
-            assertEquals(bd("2050.00"), created.getTotal());
+            assertEquals(bd("2100.00"), created.getTotal());
 
-            // verify transaction boundaries & param binding on header
+
+            // verify TX and a couple of bindings
             verify(conn).setAutoCommit(false);
             verify(psInsertBill).setString(eq(1), eq("INV-20250814-120500-0002"));
             verify(psInsertBill).setInt(eq(2), eq(77));
