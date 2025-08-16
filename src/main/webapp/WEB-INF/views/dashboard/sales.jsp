@@ -31,37 +31,29 @@
     // Check if bill has items for summary visibility
     boolean hasItems = bill != null && bill.getLines() != null && !bill.getLines().isEmpty();
 %>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Sales / Billing</title>
-    <style>
-        :root {
-            --border: #e5e7eb;
-            --border-light: #f3f4f6;
-            --border-focus: #3b82f6;
-            --muted: #6b7280;
-            --panel-height: 78vh;
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #059669;
-            --success-light: #ecfdf5;
-            --warning: #d97706;
-            --warning-light: #fef3c7;
-            --danger: #dc2626;
-            --step-active: #3b82f6;
-            --step-complete: #059669;
-            --step-inactive: #d1d5db;
-        }
+<style>
+    .sales-page {
+        --border: #e5e7eb;
+        --border-light: #f3f4f6;
+        --border-focus: #3b82f6;
+        --muted: #6b7280;
+        --panel-height: 78vh;
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --success: #059669;
+        --success-light: #ecfdf5;
+        --warning: #d97706;
+        --warning-light: #fef3c7;
+        --danger: #dc2626;
+        --step-active: #3b82f6;
+        --step-complete: #059669;
+        --step-inactive: #d1d5db;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
 
-        * { box-sizing: border-box; }
+    .sales-page * { box-sizing: border-box; }
 
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-
-        .section { }
+    .section { }
 
         .panel-head {
             margin-bottom: 1rem;
@@ -644,8 +636,7 @@
             }
         }
     </style>
-</head>
-<body>
+<div class="sales-page">
 <section class="section">
     <header class="panel-head">
         <h2 class="section-title">Sales / Billing</h2>
@@ -1235,6 +1226,5 @@
         }
 
     })();
-</script>
-</body>
-</html>
+    </script>
+</div>
