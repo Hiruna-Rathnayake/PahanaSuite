@@ -4,9 +4,6 @@
     String username = (String) request.getAttribute("username");
     String currentSection = (String) request.getAttribute("currentSection");
     if (currentSection == null || currentSection.isBlank()) currentSection = "overview";
-    Boolean hasSidebar = (Boolean) request.getAttribute("hasSidebar");
-    if (hasSidebar == null) hasSidebar = Boolean.TRUE;
-
     String bodyPath = "/WEB-INF/views/dashboard/" + currentSection + ".jsp";
     String ctx = request.getContextPath();
 %>
@@ -19,14 +16,10 @@
     <!-- use scriptlet for max compatibility -->
     <link rel="stylesheet" href="<%= ctx %>/css/dashboard.css">
 </head>
-<body class="<%= hasSidebar ? "" : "no-sidebar" %>">
+<body>
 <jsp:include page="/WEB-INF/views/components/header.jsp" />
 
 <div class="dashboard-layout">
-    <% if (hasSidebar) { %>
-    <jsp:include page="/WEB-INF/views/components/navigation.jsp" />
-    <% } %>
-
     <main class="main-content" role="main">
         <div class="content-wrapper">
             <!-- avoid EL here; compute the path above -->
