@@ -19,7 +19,10 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @WebServlet(urlPatterns = {"/dashboard/sales", "/billing"})
@@ -69,7 +72,6 @@ public class BillingServlet extends HttpServlet {
                     .map(arr -> (Customer)arr[0])
                     .collect(Collectors.toList());
         } else {
-            // cap results when no query to avoid massive lists
             filteredCustomers = allCustomers.stream().limit(limit).collect(Collectors.toList());
         }
 
@@ -112,14 +114,13 @@ public class BillingServlet extends HttpServlet {
         req.setAttribute("currentCustomer", currentCustomer);
 
         // --- dashboard wrapper expectations ---
-        req.setAttribute("currentSection", "sales");     // wrapper includes /WEB-INF/views/dashboard/sales.jsp
+        req.setAttribute("currentSection", "sales");
         req.setAttribute("hasSidebar", Boolean.TRUE);
         Object role = session.getAttribute("userRole");
         Object user = session.getAttribute("username");
         if (role != null) req.setAttribute("userRole", role);
         if (user != null) req.setAttribute("username", user);
 
-        // Render the dashboard wrapper at the ROOT (not under /WEB-INF/views/)
         req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
     }
 
@@ -145,11 +146,16 @@ public class BillingServlet extends HttpServlet {
                 }
                 case "addLine" -> {
                     ensureBill(bill);
-                    Integer itemId = tryParseInt(req.getParameter("itemId"));
-                    int qty = parseInt(req.getParameter("qty"), 0);
 
+                    // Read requested qty (guard <=0)
+                    int addQty = Math.max(1, parseInt(req.getParameter("qty"), 1));
+
+                    // Distinguish catalog vs custom line
+                    Integer itemId = tryParseInt(req.getParameter("itemId"));
                     Item snap;
+
                     if (itemId != null && itemId > 0) {
+                        // Catalog item snapshot
                         Item dbItem = itemService.getById(itemId);
                         if (dbItem == null) throw new IllegalArgumentException("Item not found");
                         snap = new Item();
@@ -157,22 +163,57 @@ public class BillingServlet extends HttpServlet {
                         snap.setSku(dbItem.getSku());
                         snap.setName(dbItem.getName());
                         snap.setUnitPrice(dbItem.getUnitPrice());
+
+                        // Merge on itemId primarily, fallback on SKU if needed
+                        Optional<BillLine> existing = findExistingCatalogLine(bill, dbItem.getId(), dbItem.getSku(), dbItem.getUnitPrice());
+
+                        if (existing.isPresent()) {
+                            // Stock check against merged total
+                            int newTotalQty = existing.get().getQuantity() + addQty;
+                            if (!hasSufficientStock(dbItem, newTotalQty)) {
+                                session.setAttribute("flash", "Only " + dbItem.getStockQty() + " in stock for " + nn(dbItem.getName()) + ".");
+                            } else {
+                                existing.get().setQuantity(newTotalQty);
+                                bill.recomputeTotals();
+                                //session.setAttribute("flash", "Added +" + addQty + " to " + nn(dbItem.getName()) + " (now " + newTotalQty + ").");
+                            }
+                        } else {
+                            // Stock check for new line
+                            if (!hasSufficientStock(dbItem, addQty)) {
+                                session.setAttribute("flash", "Only " + dbItem.getStockQty() + " in stock for " + nn(dbItem.getName()) + ".");
+                            } else {
+                                bill.addLine(BillLineFactory.from(snap, addQty));
+                                bill.recomputeTotals();
+                            }
+                        }
+
                     } else {
-                        String sku  = req.getParameter("sku");
-                        String name = req.getParameter("name");
+                        // Custom line snapshot
+                        String sku  = trim(req.getParameter("sku"));
+                        String name = trim(req.getParameter("name"));
                         if (name == null || name.isBlank()) {
                             session.setAttribute("flash", "Item name required for custom line.");
-                            resp.sendRedirect(req.getContextPath() + "/dashboard/sales");
+                            redirectSales(req, resp);
                             return;
                         }
-                        BigDecimal price = money(req.getParameter("unitPrice"));
+                        BigDecimal unitPrice = money(req.getParameter("unitPrice"));
+
                         snap = new Item();
                         snap.setSku(sku);
                         snap.setName(name);
-                        snap.setUnitPrice(price);
-                    }
+                        snap.setUnitPrice(unitPrice);
 
-                    bill.addLine(BillLineFactory.from(snap, qty));
+                        Optional<BillLine> existing = findExistingCustomLine(bill, sku, name, unitPrice);
+                        if (existing.isPresent()) {
+                            int newTotalQty = existing.get().getQuantity() + addQty;
+                            existing.get().setQuantity(newTotalQty);
+                            bill.recomputeTotals();
+                            session.setAttribute("flash", "Added +" + addQty + " to " + name + " (now " + newTotalQty + ").");
+                        } else {
+                            bill.addLine(BillLineFactory.from(snap, addQty));
+                            bill.recomputeTotals();
+                        }
+                    }
                 }
                 case "removeLine" -> {
                     ensureBill(bill);
@@ -180,6 +221,7 @@ public class BillingServlet extends HttpServlet {
                     List<BillLine> lines = bill.getLines();
                     if (idx >= 0 && idx < lines.size()) {
                         bill.removeLine(lines.get(idx));
+                        bill.recomputeTotals();
                     }
                 }
                 case "adjust" -> {
@@ -190,6 +232,10 @@ public class BillingServlet extends HttpServlet {
                 }
                 case "save" -> {
                     ensureBill(bill);
+                    if (bill.getLines() == null || bill.getLines().isEmpty()) {
+                        session.setAttribute("flash", "Cannot save an empty bill.");
+                        break;
+                    }
                     Bill saved = billDAO.createBill(bill);
                     if (saved != null) {
                         BigDecimal payAmt = money(req.getParameter("paymentAmount"));
@@ -200,7 +246,6 @@ public class BillingServlet extends HttpServlet {
                         }
                         session.setAttribute("flash", "Bill saved (ID " + saved.getId() + ").");
                         session.removeAttribute("bill");
-                        // if you haven't built /billing/receipt, point back to sales instead:
                         resp.sendRedirect(req.getContextPath() + "/billing/receipt?id=" + saved.getId());
                         return;
                     } else {
@@ -214,11 +259,96 @@ public class BillingServlet extends HttpServlet {
             session.setAttribute("flash", "Error: " + e.getMessage());
         }
 
-        // Always land back on Sales (this servlet repopulates on GET)
+        redirectSales(req, resp);
+    }
+
+    // ---------- Merge helpers ----------
+
+    /**
+     * Finds an existing catalog line by itemId primarily, then by SKU + identical unit price.
+     */
+    private Optional<BillLine> findExistingCatalogLine(Bill bill, Integer itemId, String sku, BigDecimal unitPrice) {
+        if (bill == null || bill.getLines() == null) return Optional.empty();
+
+        // First pass, strong key: itemId
+        if (itemId != null && itemId > 0) {
+            for (BillLine l : bill.getLines()) {
+                if (Objects.equals(getSafeItemId(l), itemId)) {
+                    // Optional price guard, merge only if same unit price
+                    if (pricesEqual(l.getUnitPrice(), unitPrice)) return Optional.of(l);
+                }
+            }
+        }
+
+        // Fallback, SKU + identical unit price
+        if (sku != null && !sku.isBlank()) {
+            for (BillLine l : bill.getLines()) {
+                String lSku = nn(l.getSku());
+                if (lSku.equalsIgnoreCase(sku) && pricesEqual(l.getUnitPrice(), unitPrice)) {
+                    return Optional.of(l);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Finds an existing custom line by (sku || empty) + name match + identical unit price.
+     */
+    private Optional<BillLine> findExistingCustomLine(Bill bill, String sku, String name, BigDecimal unitPrice) {
+        if (bill == null || bill.getLines() == null) return Optional.empty();
+        String keySku  = nn(sku).trim();
+        String keyName = nn(name).trim();
+
+        for (BillLine l : bill.getLines()) {
+            boolean skuMatch  = keySku.isEmpty() ? nn(l.getSku()).isEmpty() : keySku.equalsIgnoreCase(nn(l.getSku()));
+            boolean nameMatch = keyName.equalsIgnoreCase(nn(l.getName()));
+            boolean priceMatch = pricesEqual(l.getUnitPrice(), unitPrice);
+
+            if (skuMatch && nameMatch && priceMatch) return Optional.of(l);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Returns true if prices are equal at scale(2).
+     */
+    private boolean pricesEqual(BigDecimal a, BigDecimal b) {
+        if (a == null || b == null) return false;
+        return a.setScale(2, RoundingMode.HALF_UP).compareTo(b.setScale(2, RoundingMode.HALF_UP)) == 0;
+    }
+
+    /**
+     * Reads an itemId off a BillLine if your model supports it.
+     * Falls back to null if absent. Adjust if your BillLine has a different accessor.
+     */
+    private Integer getSafeItemId(BillLine l) {
+        try {
+            return l.getItemId(); // assumes BillLine has itemId
+        } catch (NoSuchMethodError | Exception ignore) {
+            return null;
+        }
+    }
+
+    /**
+     * Stock guard for merged quantities. If stock is null or negative, treat as unlimited.
+     */
+    private boolean hasSufficientStock(Item dbItem, int desiredQty) {
+        try {
+            Integer stock = dbItem.getStockQty();
+            if (stock == null || stock < 0) return true;
+            return desiredQty <= stock;
+        } catch (Exception ignore) {
+            return true;
+        }
+    }
+
+    // ---------- misc helpers ----------
+
+    private void redirectSales(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.sendRedirect(req.getContextPath() + "/dashboard/sales");
     }
 
-    // --- helpers ---
     private static void ensureBill(Bill bill) {
         if (bill == null) throw new IllegalStateException("Start a bill first");
     }
@@ -230,7 +360,7 @@ public class BillingServlet extends HttpServlet {
         catch (Exception ignore) { return null; }
     }
     private static BigDecimal money(String s) {
-        try { return new BigDecimal(s).setScale(2, java.math.RoundingMode.HALF_UP); }
+        try { return new BigDecimal(s).setScale(2, RoundingMode.HALF_UP); }
         catch (Exception ignore) { return BigDecimal.ZERO.setScale(2); }
     }
     private static String trim(String s) { return s == null ? null : s.trim(); }
