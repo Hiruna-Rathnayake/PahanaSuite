@@ -2,7 +2,7 @@
 <%
     String currentSection = (String) request.getAttribute("currentSection");
 %>
-<nav class="sidebar" role="navigation" aria-label="Main">
+<nav class="top-nav" id="top-nav" role="navigation" aria-label="Main">
     <ul>
         <li><a class="<%= "overview".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/overview">Dashboard</a></li>
