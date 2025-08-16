@@ -21,6 +21,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100dvh; /* mobile-safe full height */
+    padding-bottom: 4rem; /* space for fixed footer */
     line-height: 1.5;
 }
 
@@ -189,8 +190,12 @@ body {
     background-color: #111827;
     color: #e5e7eb;
     padding: 1rem 1.5rem; /* more padding */
-    margin-top: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
     border-top: 1px solid #0b1220;
+    z-index: 100;
 }
 
 .footer-content {
