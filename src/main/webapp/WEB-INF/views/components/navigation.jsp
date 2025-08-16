@@ -13,7 +13,7 @@
         <li><a class="<%= "items".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/items">Items</a></li>
         <li><a class="<%= "sales".equals(currentSection) ? "active" : "" %>"
-               href="${pageContext.request.contextPath}/dashboard/sales">Billing</a></li>
+               href="${pageContext.request.contextPath}/dashboard/sales">Sales</a></li>
         <li><a class="<%= "settings".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/settings">Settings</a></li>
     </ul>

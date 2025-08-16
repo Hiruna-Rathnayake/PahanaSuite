@@ -12,7 +12,6 @@ import java.util.List;
 
 public class BillDAOImpl implements BillDAO {
 
-    // --- SQL ---
     private static final String INSERT_BILL = """
         INSERT INTO bills
           (bill_no, customer_id, issued_at, due_at, status, subtotal, discount_amount, tax_amount, total)
@@ -52,22 +51,24 @@ public class BillDAOImpl implements BillDAO {
     private static final String DELETE_LINES = "DELETE FROM bill_lines WHERE bill_id = ?";
     private static final String DELETE_BILL  = "DELETE FROM bills WHERE id = ?";
 
-    // --- Create (header + lines in one TX) ---
     @Override
     public Bill createBill(Bill bill) {
+        if (bill == null) return null;
+
+        // Drop lines with qty <= 0 to avoid weird rows
+        bill.getLines().removeIf(l -> l == null || l.getQuantity() <= 0);
+
         try (Connection conn = DBConnectionFactory.getConnection()) {
             boolean oldAuto = conn.getAutoCommit();
             conn.setAutoCommit(false);
-
             try (PreparedStatement ps = conn.prepareStatement(INSERT_BILL, Statement.RETURN_GENERATED_KEYS)) {
-                // ensure header totals reflect current lines & adjustments
                 bill.recomputeTotals();
 
                 ps.setString(1, bill.getBillNo());
                 ps.setInt(2, bill.getCustomerId());
                 ps.setTimestamp(3, ts(bill.getIssuedAt()));
                 ps.setTimestamp(4, ts(bill.getDueAt()));
-                ps.setString(5, bill.getStatus().name());
+                ps.setString(5, bill.getStatus() == null ? BillStatus.ISSUED.name() : bill.getStatus().name());
                 ps.setBigDecimal(6, bill.getSubtotal());
                 ps.setBigDecimal(7, bill.getDiscountAmount());
                 ps.setBigDecimal(8, bill.getTaxAmount());
@@ -81,54 +82,57 @@ public class BillDAOImpl implements BillDAO {
                 }
                 bill.setId(billId);
 
-                try (PreparedStatement pl = conn.prepareStatement(INSERT_LINE, Statement.RETURN_GENERATED_KEYS)) {
-                    for (BillLine l : bill.getLines()) {
-                        // keep each line’s computed totals fresh
-                        l.computeTotals();
+                if (!bill.getLines().isEmpty()) {
+                    try (PreparedStatement pl = conn.prepareStatement(INSERT_LINE, Statement.RETURN_GENERATED_KEYS)) {
+                        for (BillLine l : bill.getLines()) {
+                            l.computeTotals();
+                            if (l.getQuantity() <= 0) continue; // extra guard
 
-                        pl.setInt(1, billId);
-                        if (l.getItemId() == null) pl.setNull(2, Types.INTEGER);
-                        else pl.setInt(2, l.getItemId());
-                        pl.setString(3, l.getSku());
-                        pl.setString(4, l.getName());
-                        pl.setInt(5, l.getQuantity());
-                        pl.setBigDecimal(6, l.getUnitPrice());
-                        pl.setBigDecimal(7, l.getLineDiscount());
-                        pl.setBigDecimal(8, l.getLineTotal());
-                        pl.executeUpdate();
+                            pl.setInt(1, billId);
+                            if (l.getItemId() == null) pl.setNull(2, Types.INTEGER);
+                            else pl.setInt(2, l.getItemId());
+                            pl.setString(3, nz(l.getSku()));   // null -> ""
+                            pl.setString(4, nz(l.getName()));  // null -> ""
+                            pl.setInt(5, l.getQuantity());
+                            pl.setBigDecimal(6, l.getUnitPrice());
+                            pl.setBigDecimal(7, l.getLineDiscount());
+                            pl.setBigDecimal(8, l.getLineTotal());
+                            pl.executeUpdate();
 
-                        try (ResultSet rkl = pl.getGeneratedKeys()) {
-                            if (rkl.next()) l.setId(rkl.getInt(1));
+                            try (ResultSet rkl = pl.getGeneratedKeys()) {
+                                if (rkl.next()) l.setId(rkl.getInt(1));
+                            }
                         }
                     }
                 }
 
                 conn.commit();
-                conn.setAutoCommit(oldAuto);
                 return bill;
 
             } catch (Exception ex) {
-                conn.rollback();
+                try { conn.rollback(); } catch (Exception ignore) {}
                 ex.printStackTrace();
+                return null;
+            } finally {
+                try { conn.setAutoCommit(oldAuto); } catch (Exception ignore) {}
             }
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-        return null; // failure
     }
 
-    // --- Update header only (lines are not touched) ---
     @Override
     public boolean updateBill(Bill bill) {
+        if (bill == null) return false;
         try (Connection conn = DBConnectionFactory.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE_BILL)) {
 
-            // caller should have recomputed totals if lines/adjustments changed
             ps.setString(1, bill.getBillNo());
             ps.setInt(2, bill.getCustomerId());
             ps.setTimestamp(3, ts(bill.getIssuedAt()));
             ps.setTimestamp(4, ts(bill.getDueAt()));
-            ps.setString(5, bill.getStatus().name());
+            ps.setString(5, bill.getStatus() == null ? BillStatus.ISSUED.name() : bill.getStatus().name());
             ps.setBigDecimal(6, bill.getSubtotal());
             ps.setBigDecimal(7, bill.getDiscountAmount());
             ps.setBigDecimal(8, bill.getTaxAmount());
@@ -139,11 +143,10 @@ public class BillDAOImpl implements BillDAO {
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
-    // --- Delete bill + lines ---
     @Override
     public boolean deleteBill(int id) {
         try (Connection conn = DBConnectionFactory.getConnection()) {
@@ -159,20 +162,21 @@ public class BillDAOImpl implements BillDAO {
                 int n = delBill.executeUpdate();
 
                 conn.commit();
-                conn.setAutoCommit(oldAuto);
                 return n > 0;
 
             } catch (Exception ex) {
-                conn.rollback();
+                try { conn.rollback(); } catch (Exception ignore) {}
                 ex.printStackTrace();
+                return false;
+            } finally {
+                try { conn.setAutoCommit(oldAuto); } catch (Exception ignore) {}
             }
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
-    // --- Load header + lines ---
     @Override
     public Bill findById(int id) {
         try (Connection conn = DBConnectionFactory.getConnection();
@@ -184,7 +188,6 @@ public class BillDAOImpl implements BillDAO {
 
                 Bill bill = mapBill(rs);
 
-                // load lines
                 try (PreparedStatement pl = conn.prepareStatement(SELECT_LINES)) {
                     pl.setInt(1, id);
                     try (ResultSet rl = pl.executeQuery()) {
@@ -192,18 +195,16 @@ public class BillDAOImpl implements BillDAO {
                     }
                 }
 
-                // defensive recompute for consistency with domain rules
-                bill.recomputeTotals();
+                bill.recomputeTotals(); // trust domain math
                 return bill;
             }
 
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
-    // --- List headers only ---
     @Override
     public List<Bill> findAll() {
         List<Bill> list = new ArrayList<>();
@@ -219,7 +220,6 @@ public class BillDAOImpl implements BillDAO {
         return list;
     }
 
-    // --- Mappers (keep password-like data out; not applicable here) ---
     private static Bill mapBill(ResultSet rs) throws SQLException {
         Bill b = new Bill();
         b.setId(rs.getInt("id"));
@@ -254,4 +254,6 @@ public class BillDAOImpl implements BillDAO {
     private static Timestamp ts(java.time.LocalDateTime ldt) {
         return ldt == null ? null : Timestamp.valueOf(ldt);
     }
+
+    private static String nz(String s) { return s == null ? "" : s; }
 }

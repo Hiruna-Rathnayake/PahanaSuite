@@ -87,7 +87,9 @@ public class Bill {
 
     /**
      * Recomputes header totals from current lines and invoice-level adjustments.
-     * subtotal = Σ(lineTotal), total = max(0.00, subtotal - discount + tax).
+     * subtotal = Σ(lineTotal)
+     * For tax-inclusive pricing (Sri Lanka): total = max(0.00, subtotal - discountAmount)
+     * NOTE: taxAmount is informational and NOT added on top of total.
      */
     public void recomputeTotals() {
         BigDecimal sum = BigDecimal.ZERO;
@@ -98,10 +100,12 @@ public class Bill {
         }
         this.subtotal = nz(sum);
 
-        BigDecimal net = subtotal.subtract(discountAmount).add(taxAmount);
+        // tax is included in prices; do not add taxAmount on top
+        BigDecimal net = subtotal.subtract(discountAmount);
         if (net.signum() < 0) net = BigDecimal.ZERO;
         this.total = nz(net);
     }
+
 
     private static BigDecimal nz(BigDecimal v) {
         return (v == null ? BigDecimal.ZERO : v).setScale(2, RoundingMode.HALF_UP);

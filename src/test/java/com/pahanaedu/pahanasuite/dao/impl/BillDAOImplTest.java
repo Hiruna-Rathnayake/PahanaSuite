@@ -27,9 +27,10 @@ class BillDAOImplTest {
         ResultSet rsBill  = mock(ResultSet.class);
         ResultSet rsLines = mock(ResultSet.class);
 
+        // DAO prepares two statements in this order: bill header, then lines
         when(conn.prepareStatement(anyString())).thenReturn(psBill, psLines);
 
-        // Bill query
+        // Bill row (header)
         when(psBill.executeQuery()).thenReturn(rsBill);
         when(rsBill.next()).thenReturn(true);
         when(rsBill.getInt("id")).thenReturn(5);
@@ -38,15 +39,15 @@ class BillDAOImplTest {
         when(rsBill.getTimestamp("issued_at")).thenReturn(Timestamp.valueOf(java.time.LocalDateTime.now()));
         when(rsBill.getTimestamp("due_at")).thenReturn(null);
         when(rsBill.getString("status")).thenReturn(BillStatus.ISSUED.name());
+        // header money (DB snapshot)
         when(rsBill.getBigDecimal("subtotal")).thenReturn(bd("2150.00"));
         when(rsBill.getBigDecimal("discount_amount")).thenReturn(bd("100.00"));
         when(rsBill.getBigDecimal("tax_amount")).thenReturn(bd("50.00"));
-        when(rsBill.getBigDecimal("total")).thenReturn(bd("2050.00"));
+        when(rsBill.getBigDecimal("total")).thenReturn(bd("2050.00")); // tax-inclusive total
 
-        // Lines query (two rows)
+        // Lines (2 rows): 2000 + 150 = 2150
         when(psLines.executeQuery()).thenReturn(rsLines);
         when(rsLines.next()).thenReturn(true, true, false);
-        // first line
         when(rsLines.getInt("id")).thenReturn(21, 22);
         when(rsLines.getInt("item_id")).thenReturn(1, 2);
         when(rsLines.wasNull()).thenReturn(false, false);
@@ -67,17 +68,19 @@ class BillDAOImplTest {
             assertEquals(5, bill.getId());
             assertEquals("INV-20250814-120000-0001", bill.getBillNo());
             assertEquals(99, bill.getCustomerId());
+
+            // subtotal derived from lines = 2150.00
             assertEquals(bd("2150.00"), bill.getSubtotal());
-            assertEquals(bd("2100.00"), bill.getTotal());
+            // tax-inclusive: total = subtotal - discount = 2150 - 100 = 2050.00
+            assertEquals(bd("2050.00"), bill.getTotal());
 
             assertEquals(2, bill.getLines().size());
             assertEquals("BK-001", bill.getLines().get(0).getSku());
             assertEquals(bd("2000.00"), bill.getLines().get(0).getLineTotal());
 
-            // light sanity: both statements prepared
             verify(conn, times(2)).prepareStatement(anyString());
-            verify(psBill).setInt(eq(1), eq(5)); // WHERE id=?
-            verify(psLines).setInt(eq(1), eq(5)); // WHERE bill_id=?
+            verify(psBill).setInt(eq(1), eq(5));   // WHERE id = ?
+            verify(psLines).setInt(eq(1), eq(5));  // WHERE bill_id = ?
         }
     }
 
@@ -91,7 +94,7 @@ class BillDAOImplTest {
         ResultSet keysBill  = mock(ResultSet.class);
         ResultSet keysLines = mock(ResultSet.class);
 
-        // DAO creates two prepared statements (header + line) with RETURN_GENERATED_KEYS
+        // DAO prepares (in this order) INSERT header, then INSERT line; both with RETURN_GENERATED_KEYS
         when(conn.prepareStatement(anyString(), eq(Statement.RETURN_GENERATED_KEYS)))
                 .thenReturn(psInsertBill, psInsertLine);
 
@@ -110,7 +113,7 @@ class BillDAOImplTest {
         try (MockedStatic<DBConnectionFactory> mocked = mockStatic(DBConnectionFactory.class)) {
             mocked.when(DBConnectionFactory::getConnection).thenReturn(conn);
 
-            // Build input bill (like production code would)
+            // Build bill like production code
             Bill bill = new Bill();
             bill.setBillNo("INV-20250814-120500-0002");
             bill.setCustomerId(77);
@@ -127,8 +130,8 @@ class BillDAOImplTest {
             bill.addLine(l1);
             bill.addLine(l2);
             bill.setDiscountAmount(bd("100.00"));
-            bill.setTaxAmount(bd("50.00"));
-            bill.recomputeTotals(); // subtotal 2150, total 2050
+            bill.setTaxAmount(bd("50.00")); // informational in tax-inclusive flow
+            bill.recomputeTotals(); // subtotal 2150, total 2050 (tax-inclusive)
 
             BillDAOImpl dao = new BillDAOImpl();
             Bill created = dao.createBill(bill);
@@ -137,11 +140,11 @@ class BillDAOImplTest {
             assertEquals(101, created.getId());
             assertEquals(201, created.getLines().get(0).getId());
             assertEquals(202, created.getLines().get(1).getId());
+
+            // header numbers persisted/reloaded as passed in
             assertEquals(bd("2150.00"), created.getSubtotal());
-            assertEquals(bd("2100.00"), created.getTotal());
+            assertEquals(bd("2050.00"), created.getTotal());
 
-
-            // verify TX and a couple of bindings
             verify(conn).setAutoCommit(false);
             verify(psInsertBill).setString(eq(1), eq("INV-20250814-120500-0002"));
             verify(psInsertBill).setInt(eq(2), eq(77));

@@ -1,20 +1,16 @@
+// src/main/java/com/pahanaedu/pahanasuite/web/DashboardServlet.java
 package com.pahanaedu.pahanasuite.web;
 
-import com.pahanaedu.pahanasuite.dao.impl.UserDAOImpl;
-// For quick testing without DB swap the DAO:
-// import com.pahanaedu.pahanasuite.dao.impl.UserDAOMemoryImpl;
-
+import com.pahanaedu.pahanasuite.dao.BillDAO;
+import com.pahanaedu.pahanasuite.dao.impl.BillDAOImpl;
 import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOImpl;
-// For quick testing without DB:
-// import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOMemoryImpl;
-
+import com.pahanaedu.pahanasuite.dao.impl.ItemDAOImpl;
+import com.pahanaedu.pahanasuite.dao.impl.UserDAOImpl;
+import com.pahanaedu.pahanasuite.models.Bill;
 import com.pahanaedu.pahanasuite.models.User;
+import com.pahanaedu.pahanasuite.services.CustomerService;
 import com.pahanaedu.pahanasuite.services.ItemService;
 import com.pahanaedu.pahanasuite.services.UserService;
-import com.pahanaedu.pahanasuite.services.CustomerService;
-import com.pahanaedu.pahanasuite.dao.impl.ItemDAOImpl;
-
-
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -32,15 +28,17 @@ public class DashboardServlet extends HttpServlet {
     private CustomerService customerService;
     private ItemService itemService;
 
+    // NEW: bills listing uses DAO directly (keeps your BillingService unchanged)
+    private BillDAO billDAO;
+
     @Override
     public void init() {
-        // Make sure these match (both JDBC or both Memory)
+        // Match your existing style
         userService = new UserService(new UserDAOImpl());
-        // userService = new UserService(new UserDAOMemoryImpl());
-
         customerService = new CustomerService(new CustomerDAOImpl());
-        // customerService = new CustomerService(new CustomerDAOMemoryImpl());
         itemService = new ItemService(new ItemDAOImpl());
+
+        billDAO = new BillDAOImpl(); // JDBC impl; uses DBConnectionFactory internally
     }
 
     @Override
@@ -75,13 +73,21 @@ public class DashboardServlet extends HttpServlet {
         if ("users".equalsIgnoreCase(section)) {
             req.setAttribute("users", userService.listAll());
         } else if ("customers".equalsIgnoreCase(section)) {
-            req.setAttribute("customers", customerService.listAll());   // <-- key line
+            req.setAttribute("customers", customerService.listAll());
         } else if ("items".equalsIgnoreCase(section)) {
             String q = req.getParameter("q");
             String cat = req.getParameter("category");
             req.setAttribute("items", itemService.search(q, cat, 100, 0));
+        } else if ("bills".equalsIgnoreCase(section)) {
+            // NEW: list bill headers so they’re visible on the dashboard
+            req.setAttribute("bills", billDAO.findAll());
+        } else if ("sales".equalsIgnoreCase(section)) {
+            // Optional: show current working bill started by BillingServlet
+            Bill working = (Bill) session.getAttribute("bill");
+            req.setAttribute("bill", working);
+            // You can also surface recent bills alongside the sales screen
+            req.setAttribute("recentBills", billDAO.findAll());
         }
-        // (for sales/settings data, follow the same pattern.)
 
         // Sidebar layout flag
         boolean hasSidebar = !"cashier".equalsIgnoreCase(role);
@@ -117,7 +123,10 @@ public class DashboardServlet extends HttpServlet {
             return section;
         }
         if ("cashier".equalsIgnoreCase(userRole)) {
-            if ("sales".equalsIgnoreCase(section) || "customers".equalsIgnoreCase(section)) {
+            // Allow cashiers to see bills + customers + sales
+            if ("sales".equalsIgnoreCase(section) ||
+                    "customers".equalsIgnoreCase(section) ||
+                    "bills".equalsIgnoreCase(section)) {
                 return section;
             }
             return "sales";

@@ -12,7 +12,7 @@ class BillWithLinesTest {
     private static BigDecimal bd(String v) { return new BigDecimal(v); }
 
     @Test
-    void addingLines_updatesSubtotal_andTotalWithAdjustments() {
+    void addingLines_updatesSubtotal_andTotalWithAdjustments_taxIsInclusive() {
         // Arrange: a fresh bill and two lines
         Bill bill = new Bill();
 
@@ -28,19 +28,21 @@ class BillWithLinesTest {
         pen.setName("Pen");
         pen.setUnitPrice(bd("500.00"));
 
-        BillLine l1 = BillLineFactory.from(book, 2); // 2 * 1000 = 2000
-        BillLine l2 = BillLineFactory.from(pen, 1);  // 1 * 500  = 500
+        BillLine l1 = BillLineFactory.from(book, 2); // 2 * 1000 = 2000.00
+        BillLine l2 = BillLineFactory.from(pen, 1);  // 1 * 500  =  500.00
 
         // Act: add lines and apply invoice-level adjustments
         bill.addLine(l1);
         bill.addLine(l2);
         bill.setDiscountAmount(bd("100.00")); // invoice-level discount
-        bill.setTaxAmount(bd("50.00"));       // invoice-level tax
+        bill.setTaxAmount(bd("50.00"));       // informational ONLY in tax-inclusive pricing
         bill.recomputeTotals();
 
-        // Assert: subtotal = 2000 + 500 = 2500. total = 2500 - 100 + 50 = 2450
+        // Assert (tax-inclusive):
+        // subtotal = 2000 + 500 = 2500.00
+        // total    = subtotal - discount = 2500.00 - 100.00 = 2400.00
         assertEquals(bd("2500.00"), bill.getSubtotal());
-        assertEquals(bd("2450.00"), bill.getTotal());
+        assertEquals(bd("2400.00"), bill.getTotal());
     }
 
     @Test
@@ -53,8 +55,8 @@ class BillWithLinesTest {
         item.setName("Y");
         item.setUnitPrice(bd("200.00"));
 
-        BillLine a = BillLineFactory.from(item, 3); // 600
-        BillLine b = BillLineFactory.from(item, 2); // 400
+        BillLine a = BillLineFactory.from(item, 3); // 600.00
+        BillLine b = BillLineFactory.from(item, 2); // 400.00
 
         bill.addLine(a);
         bill.addLine(b);
