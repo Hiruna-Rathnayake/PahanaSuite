@@ -22,7 +22,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@WebServlet("/billing")
+@WebServlet(urlPatterns = {"/dashboard/sales", "/billing"})
 public class BillingServlet extends HttpServlet {
 
     private final BillDAOImpl billDAO = new BillDAOImpl();
@@ -47,6 +47,7 @@ public class BillingServlet extends HttpServlet {
             return;
         }
 
+        // --- filters ---
         String cq   = trim(req.getParameter("cq"));
         String cby  = trim(req.getParameter("cby"));
         String iq   = trim(req.getParameter("iq"));
@@ -54,13 +55,12 @@ public class BillingServlet extends HttpServlet {
         int limit   = parseInt(req.getParameter("limit"), 20);
         if (limit <= 0 || limit > 200) limit = 20;
 
-        // customers (fuzzy)
+        // --- customers (fuzzy) ---
         List<Customer> allCustomers = customerService.listAll();
-        List<Customer> filteredCustomers = allCustomers;
+        List<Customer> filteredCustomers;
         if (cq != null && !cq.isBlank()) {
             final String[] terms = cq.toLowerCase().split("\\s+");
             final boolean byTel = "tel".equalsIgnoreCase(cby);
-
             filteredCustomers = allCustomers.stream()
                     .map(c -> new Object[]{ c, scoreCustomer(c, terms, byTel) })
                     .filter(arr -> (double)arr[1] > 0.0)
@@ -68,9 +68,12 @@ public class BillingServlet extends HttpServlet {
                     .limit(limit)
                     .map(arr -> (Customer)arr[0])
                     .collect(Collectors.toList());
+        } else {
+            // cap results when no query to avoid massive lists
+            filteredCustomers = allCustomers.stream().limit(limit).collect(Collectors.toList());
         }
 
-        // items (search then fuzzy rank)
+        // --- items (search then fuzzy rank) ---
         List<Item> baseItems = itemService.search(iq, icat, 1000, 0);
         List<Item> filteredItems;
         if (iq == null || iq.isBlank()) {
@@ -86,15 +89,38 @@ public class BillingServlet extends HttpServlet {
                     .collect(Collectors.toList());
         }
 
+        // --- current bill + resolved customer ---
+        Bill bill = (Bill) session.getAttribute("bill");
+        Customer currentCustomer = null;
+        if (bill != null) {
+            for (Customer c : allCustomers) {
+                if (c.getId() == bill.getCustomerId()) { currentCustomer = c; break; }
+            }
+        }
+
+        // Optional: recent bills for sidebar/widgets if your JSP uses it
+        req.setAttribute("recentBills", billDAO.findAll());
+
+        // expose to JSPs
         req.setAttribute("cq", cq);
         req.setAttribute("cby", (cby == null || cby.isBlank()) ? "name" : cby);
         req.setAttribute("iq", iq);
         req.setAttribute("icat", icat);
         req.setAttribute("customers", filteredCustomers);
         req.setAttribute("items", filteredItems);
-        req.setAttribute("bill", (Bill) req.getSession().getAttribute("bill"));
+        req.setAttribute("bill", bill);
+        req.setAttribute("currentCustomer", currentCustomer);
 
-        req.getRequestDispatcher("/dashboard/sales").forward(req, resp);
+        // --- dashboard wrapper expectations ---
+        req.setAttribute("currentSection", "sales");     // wrapper includes /WEB-INF/views/dashboard/sales.jsp
+        req.setAttribute("hasSidebar", Boolean.TRUE);
+        Object role = session.getAttribute("userRole");
+        Object user = session.getAttribute("username");
+        if (role != null) req.setAttribute("userRole", role);
+        if (user != null) req.setAttribute("username", user);
+
+        // Render the dashboard wrapper at the ROOT (not under /WEB-INF/views/)
+        req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
     }
 
     @Override
@@ -159,7 +185,7 @@ public class BillingServlet extends HttpServlet {
                 case "adjust" -> {
                     ensureBill(bill);
                     bill.setDiscountAmount(money(req.getParameter("discount")));
-                    bill.setTaxAmount(money(req.getParameter("tax")));
+                    bill.setTaxAmount(money(req.getParameter("tax"))); // informational (included pricing)
                     bill.recomputeTotals();
                 }
                 case "save" -> {
@@ -174,6 +200,9 @@ public class BillingServlet extends HttpServlet {
                         }
                         session.setAttribute("flash", "Bill saved (ID " + saved.getId() + ").");
                         session.removeAttribute("bill");
+                        // if you haven't built /billing/receipt, point back to sales instead:
+                        resp.sendRedirect(req.getContextPath() + "/billing/receipt?id=" + saved.getId());
+                        return;
                     } else {
                         session.setAttribute("flash", "Save failed.");
                     }
@@ -185,6 +214,7 @@ public class BillingServlet extends HttpServlet {
             session.setAttribute("flash", "Error: " + e.getMessage());
         }
 
+        // Always land back on Sales (this servlet repopulates on GET)
         resp.sendRedirect(req.getContextPath() + "/dashboard/sales");
     }
 
@@ -192,7 +222,6 @@ public class BillingServlet extends HttpServlet {
     private static void ensureBill(Bill bill) {
         if (bill == null) throw new IllegalStateException("Start a bill first");
     }
-
     private static int parseInt(String s, int def) {
         try { return Integer.parseInt(s); } catch (Exception ignore) { return def; }
     }
@@ -207,7 +236,7 @@ public class BillingServlet extends HttpServlet {
     private static String trim(String s) { return s == null ? null : s.trim(); }
     private static String nn(String s) { return s == null ? "" : s; }
 
-    // fuzzy helpers
+    // --- fuzzy scoring ---
     private static double scoreCustomer(Customer c, String[] terms, boolean byTel) {
         String name = nn(c.getName()).toLowerCase();
         String tel  = nn(c.getTelephone()).toLowerCase();

@@ -140,14 +140,11 @@ body {
 }
 
 .content-wrapper {
-    max-width: 1200px;
-    margin: 0 auto;
-    background-color: #fff;
-    padding: 2rem; /* more generous padding */
-    border-radius: 12px; /* slightly more rounded */
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
+    max-width: none;   /* remove the 1200px limit */
+    margin: 0;         /* no auto-centering */
+    width: 100%;       /* span the full column */
 }
+
 
 /* Tables - IMPROVED SPACING */
 .data-table {
