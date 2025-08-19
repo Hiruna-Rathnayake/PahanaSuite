@@ -16,7 +16,7 @@
     String flash = (String) request.getAttribute("flash");
 %>
 
-<section class="section">
+<section class="section panel-section">
     <header class="panel-head">
         <h2 class="section-title">Items</h2>
         <div class="quick-actions" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
@@ -59,8 +59,9 @@
     </div>
     <% } %>
 
-    <div class="panel" style="margin-top:1rem;">
-        <table class="data-table">
+    <div class="panel flex-panel" style="margin-top:1rem;">
+        <div class="scroll-wrap">
+            <table class="data-table">
             <thead>
             <tr>
                 <th style="width:56px;">ID</th>
@@ -160,6 +161,7 @@
             %>
             </tbody>
         </table>
+        </div>
     </div>
 </section>
 

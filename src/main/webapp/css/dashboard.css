@@ -6,7 +6,9 @@
     --light: #f5f7fb;
     --dark: #111827;
     --border: #e5e7eb;
+    --border-light: #f3f4f6;
     --muted: #6b7280;
+    --panel-height: 78vh;
     --shadow: 0 2px 8px rgba(0,0,0,0.08);
     --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
 }
@@ -542,4 +544,59 @@ form[style*="display:flex"] {
     form[style*="grid-template-columns"] {
         grid-template-columns: 1fr !important;
     }
+}
+
+/* Fixed-height panels */
+.panel-section {
+    height: var(--panel-height);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.panel-section .flex-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Scrollable table wrapper */
+.scroll-wrap {
+    overflow: auto;
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    min-height: 0;
+    flex: 1;
+    background: #fefefe;
+}
+
+.scroll-wrap:hover {
+    border-color: var(--border);
+}
+
+.scroll-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.scroll-wrap th,
+.scroll-wrap td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-light);
+    text-align: left;
+    font-size: 0.82rem;
+}
+
+.scroll-wrap thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
