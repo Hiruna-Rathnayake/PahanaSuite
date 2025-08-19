@@ -153,4 +153,81 @@ class BillDAOImplTest {
             verify(conn).setAutoCommit(true);
         }
     }
+
+    @Test
+    void findByCustomer_returnsBills() throws Exception {
+        Connection conn = mock(Connection.class);
+        PreparedStatement ps = mock(PreparedStatement.class);
+        ResultSet rs = mock(ResultSet.class);
+
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
+        when(ps.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true, false);
+
+        // first row
+        when(rs.getInt("id")).thenReturn(1, 2);
+        when(rs.getString("bill_no")).thenReturn("B1", "B2");
+        when(rs.getInt("customer_id")).thenReturn(9, 9);
+        Timestamp now = Timestamp.valueOf(java.time.LocalDateTime.now());
+        when(rs.getTimestamp("issued_at")).thenReturn(now, now);
+        when(rs.getTimestamp("due_at")).thenReturn(null, null);
+        when(rs.getString("status")).thenReturn(BillStatus.ISSUED.name(), BillStatus.ISSUED.name());
+        when(rs.getBigDecimal("subtotal")).thenReturn(bd("10.00"), bd("20.00"));
+        when(rs.getBigDecimal("discount_amount")).thenReturn(bd("0.00"), bd("0.00"));
+        when(rs.getBigDecimal("tax_amount")).thenReturn(bd("0.00"), bd("0.00"));
+        when(rs.getBigDecimal("total")).thenReturn(bd("10.00"), bd("20.00"));
+
+        try (MockedStatic<DBConnectionFactory> mocked = mockStatic(DBConnectionFactory.class)) {
+            mocked.when(DBConnectionFactory::getConnection).thenReturn(conn);
+
+            BillDAOImpl dao = new BillDAOImpl();
+            java.util.List<Bill> bills = dao.findByCustomer(9);
+
+            assertEquals(2, bills.size());
+            assertEquals("B1", bills.get(0).getBillNo());
+            assertEquals("B2", bills.get(1).getBillNo());
+
+            verify(ps).setInt(eq(1), eq(9));
+        }
+    }
+
+    @Test
+    void findIssuedBetween_setsTimestampsAndMaps() throws Exception {
+        Connection conn = mock(Connection.class);
+        PreparedStatement ps = mock(PreparedStatement.class);
+        ResultSet rs = mock(ResultSet.class);
+
+        when(conn.prepareStatement(anyString())).thenReturn(ps);
+        when(ps.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, true, false);
+
+        when(rs.getInt("id")).thenReturn(1, 2);
+        when(rs.getString("bill_no")).thenReturn("B1", "B2");
+        when(rs.getInt("customer_id")).thenReturn(3, 4);
+        Timestamp now = Timestamp.valueOf(java.time.LocalDateTime.now());
+        when(rs.getTimestamp("issued_at")).thenReturn(now, now);
+        when(rs.getTimestamp("due_at")).thenReturn(null, null);
+        when(rs.getString("status")).thenReturn(BillStatus.ISSUED.name(), BillStatus.ISSUED.name());
+        when(rs.getBigDecimal("subtotal")).thenReturn(bd("1"), bd("2"));
+        when(rs.getBigDecimal("discount_amount")).thenReturn(bd("0"), bd("0"));
+        when(rs.getBigDecimal("tax_amount")).thenReturn(bd("0"), bd("0"));
+        when(rs.getBigDecimal("total")).thenReturn(bd("1"), bd("2"));
+
+        java.time.LocalDateTime from = java.time.LocalDateTime.now().minusDays(1);
+        java.time.LocalDateTime to   = java.time.LocalDateTime.now().plusDays(1);
+
+        try (MockedStatic<DBConnectionFactory> mocked = mockStatic(DBConnectionFactory.class)) {
+            mocked.when(DBConnectionFactory::getConnection).thenReturn(conn);
+
+            BillDAOImpl dao = new BillDAOImpl();
+            java.util.List<Bill> bills = dao.findIssuedBetween(from, to);
+
+            assertEquals(2, bills.size());
+            assertEquals(1, bills.get(0).getId());
+            assertEquals(2, bills.get(1).getId());
+
+            verify(ps).setTimestamp(eq(1), eq(Timestamp.valueOf(from)));
+            verify(ps).setTimestamp(eq(2), eq(Timestamp.valueOf(to)));
+        }
+    }
 }
