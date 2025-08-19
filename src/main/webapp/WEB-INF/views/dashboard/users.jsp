@@ -20,7 +20,7 @@
     }
 %>
 
-<section class="section">
+<section class="section panel-section">
     <header class="panel-head">
         <h2 class="section-title">Users</h2>
         <div class="quick-actions">
@@ -120,56 +120,58 @@
     </div>
     <% } %>
 
-    <div class="panel" style="margin-top:1rem;">
-        <table class="data-table">
-            <thead>
-            <tr>
-                <th style="width:56px;">ID</th>
-                <th>Username</th>
-                <th style="width:140px;">Role</th>
-                <th style="width:240px;">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <%
-                if (users.isEmpty()) {
-            %>
-            <tr><td colspan="4">No users found.</td></tr>
-            <%
-            } else {
-                for (User u : users) {
-            %>
-            <tr>
-                <td><%= u.getId() %></td>
-                <td><%= u.getUsername() %></td>
-                <td><%= u.getRole() %></td>
-                <td>
-                    <% if (canWrite) { %>
-                    <a class="btn" href="<%=ctx%>/dashboard/users?edit=<%=u.getId()%>">Edit</a>
+    <div class="panel flex-panel" style="margin-top:1rem;">
+        <div class="scroll-wrap">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th style="width:56px;">ID</th>
+                    <th>Username</th>
+                    <th style="width:140px;">Role</th>
+                    <th style="width:240px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <%
+                    if (users.isEmpty()) {
+                %>
+                <tr><td colspan="4">No users found.</td></tr>
+                <%
+                } else {
+                    for (User u : users) {
+                %>
+                <tr>
+                    <td><%= u.getId() %></td>
+                    <td><%= u.getUsername() %></td>
+                    <td><%= u.getRole() %></td>
+                    <td>
+                        <% if (canWrite) { %>
+                        <a class="btn" href="<%=ctx%>/dashboard/users?edit=<%=u.getId()%>">Edit</a>
 
-                    <form action="<%=ctx%>/dashboard/users/actions" method="post" style="display:inline">
-                        <input type="hidden" name="action" value="resetPassword">
-                        <input type="hidden" name="id" value="<%= u.getId() %>">
-                        <button class="btn" type="submit">Reset PW</button>
-                    </form>
+                        <form action="<%=ctx%>/dashboard/users/actions" method="post" style="display:inline">
+                            <input type="hidden" name="action" value="resetPassword">
+                            <input type="hidden" name="id" value="<%= u.getId() %>">
+                            <button class="btn" type="submit">Reset PW</button>
+                        </form>
 
-                    <form action="<%=ctx%>/dashboard/users/actions" method="post" style="display:inline"
-                          onsubmit="return confirm('Delete <%=u.getUsername()%>?');">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="<%= u.getId() %>">
-                        <button class="btn" type="submit"
-                                style="background:var(--danger);color:#fff;border-color:transparent;">Delete</button>
-                    </form>
-                    <% } else { %>
-                    <span style="color:var(--muted);">Read-only</span>
-                    <% } %>
-                </td>
-            </tr>
-            <%
+                        <form action="<%=ctx%>/dashboard/users/actions" method="post" style="display:inline"
+                              onsubmit="return confirm('Delete <%=u.getUsername()%>?');">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="<%= u.getId() %>">
+                            <button class="btn" type="submit"
+                                    style="background:var(--danger);color:#fff;border-color:transparent;">Delete</button>
+                        </form>
+                        <% } else { %>
+                        <span style="color:var(--muted);">Read-only</span>
+                        <% } %>
+                    </td>
+                </tr>
+                <%
+                        }
                     }
-                }
-            %>
-            </tbody>
-        </table>
+                %>
+                </tbody>
+            </table>
+        </div>
     </div>
 </section>
