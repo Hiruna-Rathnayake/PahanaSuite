@@ -23,7 +23,6 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100dvh; /* mobile-safe full height */
-    padding-bottom: 4rem; /* space for fixed footer */
     line-height: 1.5;
 }
 
@@ -121,7 +120,8 @@ body {
 .main-content {
     background-color: var(--light);
     padding: 1.5rem; /* more spacious */
-    overflow: auto;
+    margin-bottom: 4rem; /* space for fixed footer */
+    overflow: hidden; /* only inner panels scroll */
 }
 
 .content-wrapper {
