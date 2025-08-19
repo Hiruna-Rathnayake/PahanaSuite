@@ -11,4 +11,7 @@ public interface CustomerDAO {
     Customer createCustomer(Customer customer);
     boolean updateCustomer(Customer customer);
     boolean deleteCustomer(int id);
+
+    /** Counts all customers. */
+    int countAll();
 }

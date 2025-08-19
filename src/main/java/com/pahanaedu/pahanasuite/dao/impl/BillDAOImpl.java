@@ -7,6 +7,7 @@ import com.pahanaedu.pahanasuite.models.BillLine;
 import com.pahanaedu.pahanasuite.models.BillStatus;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,6 +51,8 @@ public class BillDAOImpl implements BillDAO {
 
     private static final String DELETE_LINES = "DELETE FROM bill_lines WHERE bill_id = ?";
     private static final String DELETE_BILL  = "DELETE FROM bills WHERE id = ?";
+    private static final String COUNT_ISSUED_BETWEEN =
+            "SELECT COUNT(*) FROM bills WHERE issued_at >= ? AND issued_at < ?";
 
     @Override
     public Bill createBill(Bill bill) {
@@ -218,6 +221,23 @@ public class BillDAOImpl implements BillDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    @Override
+    public int countIssuedBetween(LocalDateTime from, LocalDateTime to) {
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(COUNT_ISSUED_BETWEEN)) {
+
+            ps.setTimestamp(1, ts(from));
+            ps.setTimestamp(2, ts(to));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
     }
 
     private static Bill mapBill(ResultSet rs) throws SQLException {

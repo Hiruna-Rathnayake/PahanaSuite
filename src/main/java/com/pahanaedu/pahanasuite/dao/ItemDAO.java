@@ -14,4 +14,7 @@ public interface ItemDAO {
 
     /** Add or remove stock in one atomic statement; refuses to go below 0. */
     boolean adjustStock(int id, int delta);
+
+    /** Counts items whose stock is below the given threshold. */
+    int countLowStock(int threshold);
 }

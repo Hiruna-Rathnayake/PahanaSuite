@@ -1,16 +1,4 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%
-    // Optional: placeholders if backend attributes are not set yet
-    Integer kpiDailySales      = (Integer) request.getAttribute("kpiDailySales");
-    Integer kpiMonthlySales    = (Integer) request.getAttribute("kpiMonthlySales");
-    Integer kpiCustomers       = (Integer) request.getAttribute("kpiCustomers");
-    Integer kpiLowStockItems   = (Integer) request.getAttribute("kpiLowStockItems");
-
-    if (kpiDailySales == null)    kpiDailySales = 42;        // TODO replace with real value
-    if (kpiMonthlySales == null)  kpiMonthlySales = 1234;    // TODO replace
-    if (kpiCustomers == null)     kpiCustomers = 318;        // TODO replace
-    if (kpiLowStockItems == null) kpiLowStockItems = 7;      // TODO replace
-%>
 
 <section class="section">
     <h2 class="section-title">Overview</h2>
@@ -19,22 +7,22 @@
     <div class="kpi-grid">
         <div class="kpi-card">
             <div class="kpi-label">Today’s Bills</div>
-            <div class="kpi-value"><%= kpiDailySales %></div>
+            <div class="kpi-value"><%= request.getAttribute("kpiDailySales") == null ? 0 : request.getAttribute("kpiDailySales") %></div>
             <div class="kpi-foot"><a href="${pageContext.request.contextPath}/dashboard/sales">Open Billing</a></div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Bills this Month</div>
-            <div class="kpi-value"><%= kpiMonthlySales %></div>
+            <div class="kpi-value"><%= request.getAttribute("kpiMonthlySales") == null ? 0 : request.getAttribute("kpiMonthlySales") %></div>
             <div class="kpi-foot"><a href="#">View report</a></div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Total Customers</div>
-            <div class="kpi-value"><%= kpiCustomers %></div>
+            <div class="kpi-value"><%= request.getAttribute("kpiCustomers") == null ? 0 : request.getAttribute("kpiCustomers") %></div>
             <div class="kpi-foot"><a href="${pageContext.request.contextPath}/dashboard/customers">Manage customers</a></div>
         </div>
         <div class="kpi-card kpi-warn">
             <div class="kpi-label">Low‑stock Items</div>
-            <div class="kpi-value"><%= kpiLowStockItems %></div>
+            <div class="kpi-value"><%= request.getAttribute("kpiLowStockItems") == null ? 0 : request.getAttribute("kpiLowStockItems") %></div>
             <div class="kpi-foot"><a href="${pageContext.request.contextPath}/dashboard/sales">Review items</a></div>
         </div>
     </div>
