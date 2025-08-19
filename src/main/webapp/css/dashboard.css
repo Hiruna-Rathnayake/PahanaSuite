@@ -24,6 +24,7 @@ body {
     flex-direction: column;
     min-height: 100dvh; /* mobile-safe full height */
     line-height: 1.5;
+    scrollbar-gutter: stable;
 }
 
 /* Header */
@@ -192,6 +193,8 @@ body {
     background-color: #111827;
     color: #e5e7eb;
     padding: 1rem 1.5rem; /* more padding */
+    padding-right: 1rem;
+    box-sizing: border-box;
     position: fixed;
     bottom: 0;
     left: 0;
