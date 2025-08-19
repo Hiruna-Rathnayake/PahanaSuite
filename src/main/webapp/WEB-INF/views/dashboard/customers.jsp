@@ -20,7 +20,7 @@
     }
 %>
 
-<section class="section">
+<section class="section panel-section">
     <header class="panel-head">
         <h2 class="section-title">Customers</h2>
         <div class="quick-actions">
@@ -130,54 +130,56 @@
     </div>
     <% } %>
 
-    <div class="panel" style="margin-top:1rem;">
-        <table class="data-table">
-            <thead>
-            <tr>
-                <th style="width:56px;">ID</th>
-                <th style="width:160px;">Account #</th>
-                <th>Name</th>
-                <th>Telephone</th>
-                <th style="width:130px;">Units</th>
-                <th style="width:240px;">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <%
-                if (customers.isEmpty()) {
-            %>
-            <tr><td colspan="6">No customers found.</td></tr>
-            <%
-                } else {
-                for (Customer c : customers) {
-            %>
-            <tr>
-                <td><%= c.getId() %></td>
-                <td><%= c.getAccountNumber() %></td>
-                <td><%= c.getName() %></td>
-                <td><%= c.getTelephone() == null ? "" : c.getTelephone() %></td>
-                <td><%= c.getUnitsConsumed() %></td>
-                <td>
-                    <% if (canWrite) { %>
-                    <a class="btn" href="<%=ctx%>/dashboard/customers?edit=<%=c.getId()%>">Edit</a>
+    <div class="panel flex-panel" style="margin-top:1rem;">
+        <div class="scroll-wrap">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th style="width:56px;">ID</th>
+                    <th style="width:160px;">Account #</th>
+                    <th>Name</th>
+                    <th>Telephone</th>
+                    <th style="width:130px;">Units</th>
+                    <th style="width:240px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <%
+                    if (customers.isEmpty()) {
+                %>
+                <tr><td colspan="6">No customers found.</td></tr>
+                <%
+                    } else {
+                    for (Customer c : customers) {
+                %>
+                <tr>
+                    <td><%= c.getId() %></td>
+                    <td><%= c.getAccountNumber() %></td>
+                    <td><%= c.getName() %></td>
+                    <td><%= c.getTelephone() == null ? "" : c.getTelephone() %></td>
+                    <td><%= c.getUnitsConsumed() %></td>
+                    <td>
+                        <% if (canWrite) { %>
+                        <a class="btn" href="<%=ctx%>/dashboard/customers?edit=<%=c.getId()%>">Edit</a>
 
-                    <form action="<%=ctx%>/dashboard/customers/actions" method="post" style="display:inline"
-                          onsubmit="return confirm('Delete customer <%=c.getAccountNumber()%>?');">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="<%= c.getId() %>">
-                        <button class="btn" type="submit"
-                                style="background:var(--danger);color:#fff;border-color:transparent;">Delete</button>
-                    </form>
-                    <% } else { %>
-                    <span style="color:var(--muted);">Read-only</span>
-                    <% } %>
-                </td>
-            </tr>
-            <%
-                }
-                }
-            %>
-            </tbody>
-        </table>
+                        <form action="<%=ctx%>/dashboard/customers/actions" method="post" style="display:inline"
+                              onsubmit="return confirm('Delete customer <%=c.getAccountNumber()%>?');">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="<%= c.getId() %>">
+                            <button class="btn" type="submit"
+                                    style="background:var(--danger);color:#fff;border-color:transparent;">Delete</button>
+                        </form>
+                        <% } else { %>
+                        <span style="color:var(--muted);">Read-only</span>
+                        <% } %>
+                    </td>
+                </tr>
+                <%
+                    }
+                    }
+                %>
+                </tbody>
+            </table>
+        </div>
     </div>
 </section>
