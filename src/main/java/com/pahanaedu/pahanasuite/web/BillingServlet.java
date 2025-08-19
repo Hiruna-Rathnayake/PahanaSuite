@@ -8,6 +8,7 @@ import com.pahanaedu.pahanasuite.factories.BillFactory;
 import com.pahanaedu.pahanasuite.factories.BillLineFactory;
 import com.pahanaedu.pahanasuite.models.Bill;
 import com.pahanaedu.pahanasuite.models.BillLine;
+import com.pahanaedu.pahanasuite.models.BillStatus;
 import com.pahanaedu.pahanasuite.models.Customer;
 import com.pahanaedu.pahanasuite.models.Item;
 import com.pahanaedu.pahanasuite.models.User;
@@ -245,6 +246,13 @@ public class BillingServlet extends HttpServlet {
                         if (payAmt.signum() > 0) {
                             paymentService.pay(saved.getId(), payAmt, payMethod, payRef);
                         }
+
+                        BigDecimal remaining = paymentService.remainingBalance(saved.getId(), saved.getTotal());
+                        if (remaining.signum() <= 0) {
+                            saved.setStatus(BillStatus.PAID);
+                            billDAO.updateBill(saved);
+                        }
+
                         session.setAttribute("flash", "Bill saved (ID " + saved.getId() + ").");
                         session.removeAttribute("bill");
                         resp.sendRedirect(req.getContextPath() + "/billing/receipt?id=" + saved.getId());
