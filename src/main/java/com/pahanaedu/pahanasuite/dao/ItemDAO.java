@@ -15,6 +15,13 @@ public interface ItemDAO {
     /** Add or remove stock in one atomic statement; refuses to go below 0. */
     boolean adjustStock(int id, int delta);
 
+    /**
+     * Returns a list of items whose stock is below the given threshold.
+     * Results are ordered by stock quantity ascending and limited to the
+     * specified number of rows.
+     */
+    List<Item> findLowStock(int threshold, int limit);
+
     /** Counts items whose stock is below the given threshold. */
     int countLowStock(int threshold);
 }

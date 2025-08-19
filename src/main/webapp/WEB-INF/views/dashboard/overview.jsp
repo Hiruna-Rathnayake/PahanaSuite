@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ page import="java.util.*,com.pahanaedu.pahanasuite.models.Bill" %>
+<%@ page import="java.util.*,com.pahanaedu.pahanasuite.models.Bill,com.pahanaedu.pahanasuite.models.Item" %>
 
 <section class="section">
     <h2 class="section-title">Overview</h2>
@@ -87,14 +87,36 @@
         </table>
     </div>
 
-    <!-- Alerts (placeholder) -->
+    <%
+        @SuppressWarnings("unchecked")
+        List<Item> lowStockItems = (List<Item>) request.getAttribute("lowStockItems");
+        if (lowStockItems == null) lowStockItems = Collections.emptyList();
+        Integer lowStockCount = (Integer) request.getAttribute("lowStockCount");
+        if (lowStockCount == null) lowStockCount = lowStockItems.size();
+    %>
     <div class="panel">
         <div class="panel-head">
             <h3>Alerts</h3>
         </div>
         <ul class="alert-list">
-            <li class="alert warn">7 items below reorder level. <a href="#">View list</a></li>
-            <li class="alert info">2 pending user access requests. <a href="#">Review</a></li>
+            <%
+                if (lowStockItems.isEmpty()) {
+            %>
+            <li class="alert info">No items below reorder level.</li>
+            <%
+                } else {
+                    for (Item it : lowStockItems) {
+            %>
+            <li class="alert warn"><%= it.getName() %> is below reorder level.</li>
+            <%
+                    }
+                    if (lowStockCount > lowStockItems.size()) {
+            %>
+            <li class="alert info"><a href="${pageContext.request.contextPath}/dashboard/items">View all low-stock items</a></li>
+            <%
+                    }
+                }
+            %>
         </ul>
     </div>
 </section>

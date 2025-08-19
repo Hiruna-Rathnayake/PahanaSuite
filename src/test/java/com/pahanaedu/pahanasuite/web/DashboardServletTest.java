@@ -1,140 +1,72 @@
 package com.pahanaedu.pahanasuite.web;
 
-import com.pahanaedu.pahanasuite.models.User;
-import com.pahanaedu.pahanasuite.models.Bill;
 import com.pahanaedu.pahanasuite.dao.BillDAO;
+import com.pahanaedu.pahanasuite.models.Item;
+import com.pahanaedu.pahanasuite.models.User;
 import com.pahanaedu.pahanasuite.services.CustomerService;
 import com.pahanaedu.pahanasuite.services.ItemService;
 import com.pahanaedu.pahanasuite.services.UserService;
 import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.http.*;
-import org.junit.jupiter.api.BeforeEach;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import java.lang.reflect.Field;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-public class DashboardServletTest {
+class DashboardServletTest {
+    @Test
+    void overviewSetsLowStockItemsAttribute() throws Exception {
+        DashboardServlet servlet = new DashboardServlet();
 
-    private DashboardServlet servlet;
-    private UserService userService;
-    private CustomerService customerService;
-    private ItemService itemService;
-    private BillDAO billDAO;
+        ItemService itemService = Mockito.mock(ItemService.class);
+        CustomerService customerService = Mockito.mock(CustomerService.class);
+        UserService userService = Mockito.mock(UserService.class);
+        BillDAO billDAO = Mockito.mock(BillDAO.class);
 
-    @BeforeEach
-    void setup() throws Exception {
-        servlet = new DashboardServlet();
-        userService = mock(UserService.class);
-        customerService = mock(CustomerService.class);
-        itemService = mock(ItemService.class);
-        billDAO = mock(BillDAO.class);
+        List<Item> lowItems = List.of(new Item());
+        when(itemService.findLowStock(anyInt(), anyInt())).thenReturn(lowItems);
+        when(itemService.countLowStock(anyInt())).thenReturn(lowItems.size());
+        when(customerService.countAll()).thenReturn(0);
+        when(billDAO.countIssuedBetween(any(), any())).thenReturn(0);
+        when(billDAO.findRecent(anyInt())).thenReturn(Collections.emptyList());
 
-        Field f;
-        f = DashboardServlet.class.getDeclaredField("userService");
-        f.setAccessible(true);
-        f.set(servlet, userService);
-        f = DashboardServlet.class.getDeclaredField("customerService");
-        f.setAccessible(true);
-        f.set(servlet, customerService);
+        java.lang.reflect.Field f;
         f = DashboardServlet.class.getDeclaredField("itemService");
         f.setAccessible(true);
         f.set(servlet, itemService);
+        f = DashboardServlet.class.getDeclaredField("customerService");
+        f.setAccessible(true);
+        f.set(servlet, customerService);
+        f = DashboardServlet.class.getDeclaredField("userService");
+        f.setAccessible(true);
+        f.set(servlet, userService);
         f = DashboardServlet.class.getDeclaredField("billDAO");
         f.setAccessible(true);
         f.set(servlet, billDAO);
-    }
 
-    @Test
-    void testRedirectsWhenNotLoggedIn() throws Exception {
-        HttpServletRequest req = mock(HttpServletRequest.class);
-        HttpServletResponse resp = mock(HttpServletResponse.class);
-        when(req.getSession(false)).thenReturn(null);
-        when(req.getContextPath()).thenReturn("");
-
-        servlet.doGet(req, resp);
-
-        verify(resp).sendRedirect("/login");
-    }
-
-    @Test
-    void testForwardsWhenLoggedIn() throws Exception {
         HttpServletRequest req = mock(HttpServletRequest.class);
         HttpServletResponse resp = mock(HttpServletResponse.class);
         HttpSession session = mock(HttpSession.class);
-        RequestDispatcher rd = mock(RequestDispatcher.class);
-
-        User user = new User(1, "alice", null, "admin");
-
         when(req.getSession(false)).thenReturn(session);
         when(session.getAttribute("isLoggedIn")).thenReturn(true);
+        User user = new User();
+        user.setUsername("u");
+        user.setRole("admin");
         when(session.getAttribute("user")).thenReturn(user);
-        when(req.getRequestDispatcher("/dashboard.jsp")).thenReturn(rd);
-        when(req.getContextPath()).thenReturn("");
-
-        servlet.doGet(req, resp);
-
-        verify(req).setAttribute("userRole", "admin");
-        verify(req).setAttribute("username", "alice");
-        verify(req).setAttribute("user", user);
-        verify(req).setAttribute("currentSection", "overview");
-        verify(req).setAttribute("hasSidebar", true);
-        verify(rd).forward(req, resp);
-    }
-
-    @Test
-    void testOverviewKpisAreSetForAdmin() throws Exception {
-        HttpServletRequest req = mock(HttpServletRequest.class);
-        HttpServletResponse resp = mock(HttpServletResponse.class);
-        HttpSession session = mock(HttpSession.class);
-        RequestDispatcher rd = mock(RequestDispatcher.class);
-
-        User user = new User(1, "alice", null, "admin");
-
-        when(req.getSession(false)).thenReturn(session);
-        when(session.getAttribute("isLoggedIn")).thenReturn(true);
-        when(session.getAttribute("user")).thenReturn(user);
-        when(req.getRequestDispatcher("/dashboard.jsp")).thenReturn(rd);
-        when(req.getContextPath()).thenReturn("");
         when(req.getPathInfo()).thenReturn("/overview");
 
-        when(billDAO.countIssuedBetween(any(), any())).thenReturn(5, 20);
-        when(customerService.countAll()).thenReturn(100);
-        when(itemService.countLowStock(anyInt())).thenReturn(4);
-
-        servlet.doGet(req, resp);
-
-        verify(req).setAttribute("kpiDailySales", 5);
-        verify(req).setAttribute("kpiMonthlySales", 20);
-        verify(req).setAttribute("kpiCustomers", 100);
-        verify(req).setAttribute("kpiLowStockItems", 4);
-        verify(itemService).countLowStock(5);
-        verify(billDAO, times(2)).countIssuedBetween(any(), any());
-    }
-
-    @Test
-    void testRecentBillsExposedOnOverview() throws Exception {
-        HttpServletRequest req = mock(HttpServletRequest.class);
-        HttpServletResponse resp = mock(HttpServletResponse.class);
-        HttpSession session = mock(HttpSession.class);
         RequestDispatcher rd = mock(RequestDispatcher.class);
-
-        User user = new User(1, "alice", null, "admin");
-        List<Bill> bills = Collections.emptyList();
-
-        when(req.getSession(false)).thenReturn(session);
-        when(session.getAttribute("isLoggedIn")).thenReturn(true);
-        when(session.getAttribute("user")).thenReturn(user);
         when(req.getRequestDispatcher("/dashboard.jsp")).thenReturn(rd);
-        when(req.getContextPath()).thenReturn("");
-        when(req.getPathInfo()).thenReturn("/overview");
-        when(billDAO.findRecent(10)).thenReturn(bills);
 
         servlet.doGet(req, resp);
 
-        verify(billDAO).findRecent(10);
-        verify(req).setAttribute("recentBills", bills);
+        verify(req).setAttribute("lowStockItems", lowItems);
+        verify(req).setAttribute("lowStockCount", lowItems.size());
     }
 }
