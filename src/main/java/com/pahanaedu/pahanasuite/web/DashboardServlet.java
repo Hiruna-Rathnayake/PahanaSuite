@@ -20,6 +20,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @WebServlet("/dashboard/*")
 public class DashboardServlet extends HttpServlet {
@@ -70,7 +72,22 @@ public class DashboardServlet extends HttpServlet {
         section = validateSectionAccess(section, role);
 
         // Load data needed for the section
-        if ("users".equalsIgnoreCase(section)) {
+        if ("overview".equalsIgnoreCase(section)) {
+            LocalDate today = LocalDate.now();
+            LocalDateTime startOfDay = today.atStartOfDay();
+            LocalDateTime startOfTomorrow = startOfDay.plusDays(1);
+            LocalDateTime startOfMonth = today.withDayOfMonth(1).atStartOfDay();
+
+            int daily = billDAO.countIssuedBetween(startOfDay, startOfTomorrow);
+            int monthly = billDAO.countIssuedBetween(startOfMonth, LocalDateTime.now());
+            int customers = customerService.countAll();
+            int lowStock = itemService.countLowStock(5);
+
+            req.setAttribute("kpiDailySales", daily);
+            req.setAttribute("kpiMonthlySales", monthly);
+            req.setAttribute("kpiCustomers", customers);
+            req.setAttribute("kpiLowStockItems", lowStock);
+        } else if ("users".equalsIgnoreCase(section)) {
             req.setAttribute("users", userService.listAll());
         } else if ("customers".equalsIgnoreCase(section)) {
             req.setAttribute("customers", customerService.listAll());

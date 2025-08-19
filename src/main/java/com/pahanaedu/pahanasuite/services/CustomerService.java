@@ -105,6 +105,11 @@ public class CustomerService {
         return customerDAO.deleteCustomer(id);
     }
 
+    /** Returns total number of customers. */
+    public int countAll() {
+        return customerDAO.countAll();
+    }
+
     // --- helpers ---
 
     private static String trim(String s) { return s == null ? null : s.trim(); }

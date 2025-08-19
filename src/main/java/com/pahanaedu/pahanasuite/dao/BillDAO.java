@@ -2,6 +2,7 @@ package com.pahanaedu.pahanasuite.dao;
 
 import com.pahanaedu.pahanasuite.models.Bill;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BillDAO {
@@ -20,4 +21,7 @@ public interface BillDAO {
 
     /** Returns bill headers only (no lines) for simple listings. */
     List<Bill> findAll();
+
+    /** Counts bills issued between [from, to). */
+    int countIssuedBetween(LocalDateTime from, LocalDateTime to);
 }

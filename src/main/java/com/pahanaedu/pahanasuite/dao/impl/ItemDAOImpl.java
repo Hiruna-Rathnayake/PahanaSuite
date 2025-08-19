@@ -35,6 +35,8 @@ public class ItemDAOImpl implements ItemDAO {
 
     private static final String DELETE_ITEM =
             "DELETE FROM items WHERE id=?";
+    private static final String COUNT_LOW_STOCK =
+            "SELECT COUNT(*) FROM items WHERE stock_qty < ?";
 
     // MySQL atomic stock update, prevents going negative
     private static final String ADJUST_STOCK =
@@ -188,6 +190,20 @@ public class ItemDAOImpl implements ItemDAO {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    @Override
+    public int countLowStock(int threshold) {
+        try (Connection c = DBConnectionFactory.getConnection();
+             PreparedStatement ps = c.prepareStatement(COUNT_LOW_STOCK)) {
+            ps.setInt(1, threshold);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
         }
     }
 

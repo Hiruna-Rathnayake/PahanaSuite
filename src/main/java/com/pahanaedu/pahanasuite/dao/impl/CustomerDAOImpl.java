@@ -22,6 +22,8 @@ public class CustomerDAOImpl implements CustomerDAO {
             "UPDATE customers SET account_number = ?, name = ?, address = ?, telephone = ?, units_consumed = ? WHERE id = ?";
     private static final String DELETE_CUSTOMER =
             "DELETE FROM customers WHERE id = ?";
+    private static final String COUNT_ALL =
+            "SELECT COUNT(*) FROM customers";
 
     @Override
     public Customer findById(int id) {
@@ -121,6 +123,19 @@ public class CustomerDAOImpl implements CustomerDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    @Override
+    public int countAll() {
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(COUNT_ALL);
+             ResultSet rs = ps.executeQuery()) {
+
+            return rs.next() ? rs.getInt(1) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
     }
 
     // -- helpers --

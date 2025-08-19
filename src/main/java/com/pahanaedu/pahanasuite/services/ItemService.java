@@ -130,6 +130,11 @@ public class ItemService {
         return itemDAO.adjustStock(id, delta);
     }
 
+    /** Returns count of items with stock below threshold. */
+    public int countLowStock(int threshold) {
+        return itemDAO.countLowStock(threshold);
+    }
+
     // ---------- helpers ----------
     private static boolean isValidPrice(BigDecimal p) {
         return p != null && p.compareTo(BigDecimal.ZERO) >= 0;
