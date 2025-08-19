@@ -111,6 +111,26 @@ public class BillsServlet extends HttpServlet {
                     }
                 }
             }
+            case "refund" -> {
+                BigDecimal amount = parseDecimal(req.getParameter("refundAmount"));
+                String ref = trim(req.getParameter("reference"));
+                if (id > 0) {
+                    var payment = paymentService.refund(id, amount, ref);
+                    if (payment != null) {
+                        Bill bill = billDAO.findById(id);
+                        if (bill != null) {
+                            BigDecimal remaining = paymentService.remainingBalance(id, bill.getTotal());
+                            if (remaining.signum() > 0 && bill.getStatus() == BillStatus.PAID) {
+                                bill.setStatus(BillStatus.ISSUED);
+                                billDAO.updateBill(bill);
+                            }
+                        }
+                        session.setAttribute("flash", "Refund recorded.");
+                    } else {
+                        session.setAttribute("flash", "Refund failed.");
+                    }
+                }
+            }
             default -> {
                 // ignore unknown
             }
@@ -121,4 +141,5 @@ public class BillsServlet extends HttpServlet {
 
     private static String trim(String s) { return s == null ? null : s.trim(); }
     private static int parseInt(String s) { try { return Integer.parseInt(s); } catch (Exception e) { return -1; } }
+    private static BigDecimal parseDecimal(String s) { try { return new BigDecimal(s); } catch (Exception e) { return null; } }
 }

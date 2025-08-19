@@ -65,6 +65,13 @@
                             <button class="btn" type="submit">Mark Paid</button>
                         </form>
                         <% } %>
+                        <form action="<%=ctx%>/dashboard/bills" method="post" style="display:inline">
+                            <input type="hidden" name="action" value="refund">
+                            <input type="hidden" name="id" value="<%=b.getId()%>">
+                            <input type="number" step="0.01" name="refundAmount" placeholder="Amount" style="width:80px;">
+                            <input type="text" name="reference" placeholder="Ref" style="width:80px;">
+                            <button class="btn" type="submit">Refund</button>
+                        </form>
                         <% } %>
                     </td>
                 </tr>
