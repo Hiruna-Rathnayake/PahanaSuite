@@ -10,6 +10,7 @@ import com.pahanaedu.pahanasuite.models.Bill;
 import com.pahanaedu.pahanasuite.models.BillLine;
 import com.pahanaedu.pahanasuite.models.Customer;
 import com.pahanaedu.pahanasuite.models.Item;
+import com.pahanaedu.pahanasuite.models.User;
 import com.pahanaedu.pahanasuite.services.CustomerService;
 import com.pahanaedu.pahanasuite.services.ItemService;
 import com.pahanaedu.pahanasuite.services.PaymentService;
@@ -117,9 +118,9 @@ public class BillingServlet extends HttpServlet {
         req.setAttribute("currentSection", "sales");
         req.setAttribute("hasSidebar", Boolean.TRUE);
         Object role = session.getAttribute("userRole");
-        Object user = session.getAttribute("username");
+        User user = (User) session.getAttribute("user");
         if (role != null) req.setAttribute("userRole", role);
-        if (user != null) req.setAttribute("username", user);
+        if (user != null) req.setAttribute("username", user.getUsername());
 
         req.getRequestDispatcher("/dashboard.jsp").forward(req, resp);
     }
