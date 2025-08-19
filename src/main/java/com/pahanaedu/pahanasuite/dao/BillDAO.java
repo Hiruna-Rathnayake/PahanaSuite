@@ -29,6 +29,12 @@ public interface BillDAO {
      */
     List<Bill> findRecent(int limit);
 
+    /** Returns bill headers for a given customer. */
+    List<Bill> findByCustomer(int customerId);
+
+    /** Returns bill headers issued between [from, to). */
+    List<Bill> findIssuedBetween(LocalDateTime from, LocalDateTime to);
+
     /** Counts bills issued between [from, to). */
     int countIssuedBetween(LocalDateTime from, LocalDateTime to);
 }
