@@ -28,6 +28,15 @@ public class PaymentService {
         return dao.sumByBillId(billId);
     }
 
+    /** Remaining balance for a bill (total minus payments). */
+    public BigDecimal remainingBalance(int billId, BigDecimal billTotal) {
+        BigDecimal diff = dao.outstandingAmount(billId);
+        if (diff == null) {
+            return billTotal == null ? BigDecimal.ZERO.setScale(2) : billTotal.setScale(2);
+        }
+        return diff.negate();
+    }
+
     private Payment record(int billId, BigDecimal amount, String method, String ref) {
         if (billId <= 0) return null;
         if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) return null;

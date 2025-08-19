@@ -8,4 +8,5 @@ public interface PaymentDAO {
     Payment create(Payment p);
     List<Payment> findByBillId(int billId);
     BigDecimal sumByBillId(int billId);
+    BigDecimal outstandingAmount(int billId);
 }
