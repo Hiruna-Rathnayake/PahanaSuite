@@ -37,7 +37,7 @@
         --border-light: #f3f4f6;
         --border-focus: #3b82f6;
         --muted: #6b7280;
-        --panel-height: 78vh;
+        --panel-height: calc(100vh - 4rem - 6rem); /* viewport minus header and progress bar */
         --primary: #2563eb;
         --primary-dark: #1d4ed8;
         --success: #059669;
