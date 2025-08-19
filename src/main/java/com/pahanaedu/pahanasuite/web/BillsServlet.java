@@ -2,8 +2,10 @@ package com.pahanaedu.pahanasuite.web;
 
 import com.pahanaedu.pahanasuite.dao.BillDAO;
 import com.pahanaedu.pahanasuite.dao.impl.BillDAOImpl;
+import com.pahanaedu.pahanasuite.dao.impl.PaymentDAOImpl;
 import com.pahanaedu.pahanasuite.models.Bill;
 import com.pahanaedu.pahanasuite.models.BillStatus;
+import com.pahanaedu.pahanasuite.services.PaymentService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -13,16 +15,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @WebServlet(urlPatterns = "/dashboard/bills")
 public class BillsServlet extends HttpServlet {
 
     private BillDAO billDAO;
+    private PaymentService paymentService;
 
     @Override
     public void init() {
         billDAO = new BillDAOImpl();
+        paymentService = new PaymentService(new PaymentDAOImpl());
     }
 
     @Override
@@ -35,7 +42,12 @@ public class BillsServlet extends HttpServlet {
 
         // Load all bill headers for listing
         List<Bill> bills = billDAO.findAll();
+        Map<Integer, BigDecimal> outstanding = new HashMap<>();
+        for (Bill b : bills) {
+            outstanding.put(b.getId(), paymentService.remainingBalance(b.getId(), b.getTotal()));
+        }
         req.setAttribute("bills", bills);
+        req.setAttribute("outstanding", outstanding);
 
         // If ?id= provided, load bill details
         int id = parseInt(req.getParameter("id"));

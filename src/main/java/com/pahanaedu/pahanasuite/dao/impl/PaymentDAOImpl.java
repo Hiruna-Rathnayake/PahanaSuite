@@ -23,6 +23,11 @@ public class PaymentDAOImpl implements PaymentDAO {
     """;
 
     private static final String SUM_BY_BILL = "SELECT COALESCE(SUM(amount),0) AS paid FROM payments WHERE bill_id = ?";
+    private static final String OUTSTANDING_BY_BILL = """
+        SELECT COALESCE(SUM(p.amount),0) - b.total AS outstanding
+        FROM bills b LEFT JOIN payments p ON p.bill_id = b.id
+        WHERE b.id = ?
+    """;
 
     @Override
     public Payment create(Payment p) {
@@ -67,6 +72,21 @@ public class PaymentDAOImpl implements PaymentDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     BigDecimal v = rs.getBigDecimal("paid");
+                    return v == null ? BigDecimal.ZERO.setScale(2) : v.setScale(2);
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return BigDecimal.ZERO.setScale(2);
+    }
+
+    @Override
+    public BigDecimal outstandingAmount(int billId) {
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(OUTSTANDING_BY_BILL)) {
+            ps.setInt(1, billId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    BigDecimal v = rs.getBigDecimal("outstanding");
                     return v == null ? BigDecimal.ZERO.setScale(2) : v.setScale(2);
                 }
             }

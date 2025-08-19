@@ -1,10 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="java.util.*,com.pahanaedu.pahanasuite.models.Bill,com.pahanaedu.pahanasuite.models.BillLine" %>
+<%@ page import="java.util.*,java.math.BigDecimal,com.pahanaedu.pahanasuite.models.Bill,com.pahanaedu.pahanasuite.models.BillLine" %>
 <%
     String ctx = request.getContextPath();
     @SuppressWarnings("unchecked")
     List<Bill> bills = (List<Bill>) request.getAttribute("bills");
     if (bills == null) bills = java.util.Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    Map<Integer, BigDecimal> outstanding = (Map<Integer, BigDecimal>) request.getAttribute("outstanding");
+    if (outstanding == null) outstanding = java.util.Collections.emptyMap();
     Bill selected = (Bill) request.getAttribute("selectedBill");
     String flash = (String) request.getAttribute("flash");
     String role = (String) request.getAttribute("userRole");
@@ -32,12 +35,13 @@
                     <th style="width:120px;">Customer</th>
                     <th style="width:160px;">Issued At</th>
                     <th style="width:100px;">Status</th>
+                    <th style="width:120px;">Outstanding</th>
                     <th style="width:240px;">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 <% if (bills.isEmpty()) { %>
-                <tr><td colspan="6">No bills found.</td></tr>
+                <tr><td colspan="7">No bills found.</td></tr>
                 <% } else { for (Bill b : bills) { %>
                 <tr>
                     <td><%= b.getId() %></td>
@@ -45,6 +49,7 @@
                     <td><%= b.getCustomerId() %></td>
                     <td><%= b.getIssuedAt() %></td>
                     <td><%= b.getStatus() %></td>
+                    <td>Rs.<%= String.format("%.2f", outstanding.getOrDefault(b.getId(), BigDecimal.ZERO)) %></td>
                     <td>
                         <a class="btn" href="<%=ctx%>/dashboard/bills?id=<%=b.getId()%>">View</a>
                         <% if (canWrite) { %>
