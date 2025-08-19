@@ -135,6 +135,12 @@ public class ItemService {
         return itemDAO.countLowStock(threshold);
     }
 
+    /** Returns items with stock below threshold ordered ascending. */
+    public List<Item> findLowStock(int threshold, int limit) {
+        if (limit <= 0) limit = 10;
+        return itemDAO.findLowStock(threshold, limit);
+    }
+
     // ---------- helpers ----------
     private static boolean isValidPrice(BigDecimal p) {
         return p != null && p.compareTo(BigDecimal.ZERO) >= 0;

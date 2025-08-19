@@ -37,6 +37,8 @@ public class ItemDAOImpl implements ItemDAO {
             "DELETE FROM items WHERE id=?";
     private static final String COUNT_LOW_STOCK =
             "SELECT COUNT(*) FROM items WHERE stock_qty < ?";
+    private static final String FIND_LOW_STOCK =
+            "SELECT " + BASE_COLS + " FROM items WHERE stock_qty < ? ORDER BY stock_qty ASC LIMIT ?";
 
     // MySQL atomic stock update, prevents going negative
     private static final String ADJUST_STOCK =
@@ -191,6 +193,25 @@ public class ItemDAOImpl implements ItemDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    @Override
+    public List<Item> findLowStock(int threshold, int limit) {
+        if (limit <= 0) limit = 10;
+        List<Item> items = new ArrayList<>();
+        try (Connection c = DBConnectionFactory.getConnection();
+             PreparedStatement ps = c.prepareStatement(FIND_LOW_STOCK)) {
+            ps.setInt(1, threshold);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    items.add(map(rs));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return items;
     }
 
     @Override

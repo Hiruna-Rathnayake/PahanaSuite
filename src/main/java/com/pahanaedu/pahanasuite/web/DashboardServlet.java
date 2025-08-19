@@ -7,6 +7,7 @@ import com.pahanaedu.pahanasuite.dao.impl.CustomerDAOImpl;
 import com.pahanaedu.pahanasuite.dao.impl.ItemDAOImpl;
 import com.pahanaedu.pahanasuite.dao.impl.UserDAOImpl;
 import com.pahanaedu.pahanasuite.models.Bill;
+import com.pahanaedu.pahanasuite.models.Item;
 import com.pahanaedu.pahanasuite.models.User;
 import com.pahanaedu.pahanasuite.services.CustomerService;
 import com.pahanaedu.pahanasuite.services.ItemService;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @WebServlet("/dashboard/*")
 public class DashboardServlet extends HttpServlet {
@@ -81,12 +83,15 @@ public class DashboardServlet extends HttpServlet {
             int daily = billDAO.countIssuedBetween(startOfDay, startOfTomorrow);
             int monthly = billDAO.countIssuedBetween(startOfMonth, LocalDateTime.now());
             int customers = customerService.countAll();
-            int lowStock = itemService.countLowStock(5);
+            int lowStockCount = itemService.countLowStock(5);
+            List<Item> lowStockItems = itemService.findLowStock(5, 5);
 
             req.setAttribute("kpiDailySales", daily);
             req.setAttribute("kpiMonthlySales", monthly);
             req.setAttribute("kpiCustomers", customers);
-            req.setAttribute("kpiLowStockItems", lowStock);
+            req.setAttribute("kpiLowStockItems", lowStockCount);
+            req.setAttribute("lowStockItems", lowStockItems);
+            req.setAttribute("lowStockCount", lowStockCount);
             req.setAttribute("recentBills", billDAO.findRecent(10));
         } else if ("users".equalsIgnoreCase(section)) {
             req.setAttribute("users", userService.listAll());
