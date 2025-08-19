@@ -42,6 +42,12 @@ public class BillDAOImpl implements BillDAO {
         FROM bills ORDER BY id
         """;
 
+    private static final String SELECT_RECENT = """
+        SELECT id, bill_no, customer_id, issued_at, due_at, status,
+               subtotal, discount_amount, tax_amount, total
+        FROM bills ORDER BY issued_at DESC LIMIT ?
+        """;
+
     private static final String UPDATE_BILL = """
         UPDATE bills
            SET bill_no=?, customer_id=?, issued_at=?, due_at=?, status=?,
@@ -217,6 +223,24 @@ public class BillDAOImpl implements BillDAO {
 
             while (rs.next()) list.add(mapBill(rs));
 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    @Override
+    public List<Bill> findRecent(int limit) {
+        List<Bill> list = new ArrayList<>();
+        if (limit <= 0) return list;
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_RECENT)) {
+
+            ps.setInt(1, limit);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapBill(rs));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

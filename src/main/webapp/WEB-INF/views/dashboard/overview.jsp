@@ -1,4 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.util.*,com.pahanaedu.pahanasuite.models.Bill" %>
 
 <section class="section">
     <h2 class="section-title">Overview</h2>
@@ -35,45 +36,53 @@
         <a class="btn" href="${pageContext.request.contextPath}/dashboard/settings">Settings</a>
     </div>
 
-    <!-- Recent activity (placeholder) -->
+    <%
+        @SuppressWarnings("unchecked")
+        List<Bill> recentBills = (List<Bill>) request.getAttribute("recentBills");
+        if (recentBills == null) recentBills = Collections.emptyList();
+        java.time.format.DateTimeFormatter tFmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+    %>
+
     <div class="panel">
         <div class="panel-head">
-            <h3>Recent Activity</h3>
-            <a href="#">See all</a>
+            <h3>Recent Bills</h3>
         </div>
         <table class="data-table">
             <thead>
             <tr>
                 <th>Time</th>
-                <th>Type</th>
-                <th>Reference</th>
+                <th>Bill No.</th>
                 <th>User</th>
                 <th>Total</th>
             </tr>
             </thead>
             <tbody>
-            <!-- TODO: loop real activity; placeholders for now -->
+            <%
+                if (recentBills.isEmpty()) {
+            %>
+            <tr><td colspan="4">No recent bills.</td></tr>
+            <%
+                } else {
+                    for (Bill b : recentBills) {
+                        String issuer;
+                        try {
+                            java.lang.reflect.Method m = b.getClass().getMethod("getIssuedBy");
+                            Object val = m.invoke(b);
+                            issuer = val == null ? "—" : String.valueOf(val);
+                        } catch (Exception e) {
+                            issuer = "—";
+                        }
+            %>
             <tr>
-                <td>09:42</td>
-                <td>Bill</td>
-                <td>#B-10293</td>
-                <td>kasun</td>
-                <td>LKR 4,550.00</td>
+                <td><%= b.getIssuedAt()==null? "" : b.getIssuedAt().format(tFmt) %></td>
+                <td><%= b.getBillNo()==null? ("#" + b.getId()) : b.getBillNo() %></td>
+                <td><%= issuer %></td>
+                <td>LKR <%= b.getTotal()==null? "0.00" : String.format("%,.2f", b.getTotal()) %></td>
             </tr>
-            <tr>
-                <td>09:15</td>
-                <td>Customer</td>
-                <td>#C-00871</td>
-                <td>admin</td>
-                <td>—</td>
-            </tr>
-            <tr>
-                <td>08:58</td>
-                <td>Stock</td>
-                <td>“Grade 10 Maths”</td>
-                <td>manager</td>
-                <td>—</td>
-            </tr>
+            <%
+                    }
+                }
+            %>
             </tbody>
         </table>
     </div>
