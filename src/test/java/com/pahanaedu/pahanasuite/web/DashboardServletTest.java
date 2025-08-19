@@ -1,6 +1,7 @@
 package com.pahanaedu.pahanasuite.web;
 
 import com.pahanaedu.pahanasuite.models.User;
+import com.pahanaedu.pahanasuite.models.Bill;
 import com.pahanaedu.pahanasuite.dao.BillDAO;
 import com.pahanaedu.pahanasuite.services.CustomerService;
 import com.pahanaedu.pahanasuite.services.ItemService;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.*;
 
 import static org.mockito.Mockito.*;
 
@@ -110,5 +112,29 @@ public class DashboardServletTest {
         verify(req).setAttribute("kpiLowStockItems", 4);
         verify(itemService).countLowStock(5);
         verify(billDAO, times(2)).countIssuedBetween(any(), any());
+    }
+
+    @Test
+    void testRecentBillsExposedOnOverview() throws Exception {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        HttpSession session = mock(HttpSession.class);
+        RequestDispatcher rd = mock(RequestDispatcher.class);
+
+        User user = new User(1, "alice", null, "admin");
+        List<Bill> bills = Collections.emptyList();
+
+        when(req.getSession(false)).thenReturn(session);
+        when(session.getAttribute("isLoggedIn")).thenReturn(true);
+        when(session.getAttribute("user")).thenReturn(user);
+        when(req.getRequestDispatcher("/dashboard.jsp")).thenReturn(rd);
+        when(req.getContextPath()).thenReturn("");
+        when(req.getPathInfo()).thenReturn("/overview");
+        when(billDAO.findRecent(10)).thenReturn(bills);
+
+        servlet.doGet(req, resp);
+
+        verify(billDAO).findRecent(10);
+        verify(req).setAttribute("recentBills", bills);
     }
 }

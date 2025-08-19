@@ -87,6 +87,7 @@ public class DashboardServlet extends HttpServlet {
             req.setAttribute("kpiMonthlySales", monthly);
             req.setAttribute("kpiCustomers", customers);
             req.setAttribute("kpiLowStockItems", lowStock);
+            req.setAttribute("recentBills", billDAO.findRecent(10));
         } else if ("users".equalsIgnoreCase(section)) {
             req.setAttribute("users", userService.listAll());
         } else if ("customers".equalsIgnoreCase(section)) {

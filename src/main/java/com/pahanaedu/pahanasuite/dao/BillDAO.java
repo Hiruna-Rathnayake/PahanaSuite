@@ -22,6 +22,13 @@ public interface BillDAO {
     /** Returns bill headers only (no lines) for simple listings. */
     List<Bill> findAll();
 
+    /**
+     * Returns the most recently issued bills ordered by {@code issued_at DESC}.
+     *
+     * @param limit maximum number of bills to return
+     */
+    List<Bill> findRecent(int limit);
+
     /** Counts bills issued between [from, to). */
     int countIssuedBetween(LocalDateTime from, LocalDateTime to);
 }
