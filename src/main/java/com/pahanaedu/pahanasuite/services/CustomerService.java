@@ -110,6 +110,18 @@ public class CustomerService {
         return customerDAO.countAll();
     }
 
+    /**
+     * Increments the unitsConsumed field of a customer by the given amount.
+     * Returns true if the update was applied.
+     */
+    public boolean addUnitsConsumed(int id, int units) {
+        if (id <= 0 || units <= 0) return false;
+        Customer c = customerDAO.findById(id);
+        if (c == null) return false;
+        c.setUnitsConsumed(c.getUnitsConsumed() + units);
+        return customerDAO.updateCustomer(c);
+    }
+
     // --- helpers ---
 
     private static String trim(String s) { return s == null ? null : s.trim(); }

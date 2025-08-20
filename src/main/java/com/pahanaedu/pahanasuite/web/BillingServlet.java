@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @WebServlet(urlPatterns = {"/dashboard/sales", "/billing"})
 public class BillingServlet extends HttpServlet {
 
-    private final BillDAOImpl billDAO = new BillDAOImpl();
+    private BillDAOImpl billDAO = new BillDAOImpl();
     private CustomerService customerService;
     private ItemService itemService;
     private PaymentService paymentService;
@@ -239,6 +239,16 @@ public class BillingServlet extends HttpServlet {
                     }
                     Bill saved = billDAO.createBill(bill);
                     if (saved != null) {
+                        int totalUnits = 0;
+                        for (BillLine l : bill.getLines()) {
+                            totalUnits += l.getQuantity();
+                            Integer itemId = l.getItemId();
+                            if (itemId != null) {
+                                itemService.adjustStock(itemId, -l.getQuantity());
+                            }
+                        }
+                        customerService.addUnitsConsumed(bill.getCustomerId(), totalUnits);
+
                         BigDecimal payAmt = money(req.getParameter("paymentAmount"));
                         String payMethod  = req.getParameter("paymentMethod");
                         String payRef     = req.getParameter("paymentRef");
