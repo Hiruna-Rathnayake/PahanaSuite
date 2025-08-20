@@ -24,6 +24,9 @@
     <header class="panel-head">
         <h2 class="section-title">Customers</h2>
         <div class="quick-actions">
+            <input id="customerSearch" type="search" placeholder="Search name or phone…"
+                   style="padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;">
+
             <% if ("forbidden".equals(err)) { %>
             <span style="color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;padding:.3rem .5rem;border-radius:6px;">
               You don't have permission to modify customers.
@@ -132,7 +135,7 @@
 
     <div class="panel flex-panel" style="margin-top:1rem;">
         <div class="scroll-wrap">
-            <table class="data-table">
+            <table class="data-table" id="customerTable">
                 <thead>
                 <tr>
                     <th style="width:56px;">ID</th>
@@ -183,3 +186,22 @@
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var search = document.getElementById('customerSearch');
+    var table = document.getElementById('customerTable');
+    if (!search || !table) return;
+    var rows = Array.from(table.querySelectorAll('tbody tr'));
+    search.addEventListener('input', function () {
+        var term = this.value.toLowerCase();
+        rows.forEach(function (row) {
+            var cells = row.getElementsByTagName('td');
+            if (cells.length < 4) return;
+            var name = cells[2].textContent.toLowerCase();
+            var phone = cells[3].textContent.toLowerCase();
+            row.style.display = name.indexOf(term) !== -1 || phone.indexOf(term) !== -1 ? '' : 'none';
+        });
+    });
+});
+</script>
