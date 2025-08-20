@@ -167,4 +167,27 @@ class CustomerServiceTest {
         assertTrue(service.delete(10));
         verify(dao, times(1)).deleteCustomer(10);
     }
+
+    // -------- addUnitsConsumed() --------
+
+    @Test
+    void addUnitsConsumed_success() {
+        Customer existing = new Customer("ACC-001", "Alice", null, null, 5);
+        existing.setId(7);
+        when(dao.findById(7)).thenReturn(existing);
+        when(dao.updateCustomer(existing)).thenReturn(true);
+
+        assertTrue(service.addUnitsConsumed(7, 3));
+        assertEquals(8, existing.getUnitsConsumed());
+        verify(dao).updateCustomer(existing);
+    }
+
+    @Test
+    void addUnitsConsumed_fail_invalid() {
+        assertFalse(service.addUnitsConsumed(0, 1));
+        assertFalse(service.addUnitsConsumed(1, 0));
+        when(dao.findById(1)).thenReturn(null);
+        assertFalse(service.addUnitsConsumed(1, 2));
+        verify(dao).findById(1);
+    }
 }
