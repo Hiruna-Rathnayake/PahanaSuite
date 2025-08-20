@@ -10,6 +10,7 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 public class BillDAOImpl implements BillDAO {
 
@@ -71,6 +72,8 @@ public class BillDAOImpl implements BillDAO {
     private static final String DELETE_BILL  = "DELETE FROM bills WHERE id = ?";
     private static final String COUNT_ISSUED_BETWEEN =
             "SELECT COUNT(*) FROM bills WHERE issued_at >= ? AND issued_at < ?";
+    private static final String SUM_TOTAL_ISSUED_BETWEEN =
+            "SELECT COALESCE(SUM(total),0) FROM bills WHERE issued_at >= ? AND issued_at < ?";
 
     @Override
     public Bill createBill(Bill bill) {
@@ -308,6 +311,23 @@ public class BillDAOImpl implements BillDAO {
         } catch (Exception e) {
             e.printStackTrace();
             return 0;
+        }
+    }
+
+    @Override
+    public BigDecimal sumTotalIssuedBetween(LocalDateTime from, LocalDateTime to) {
+        try (Connection conn = DBConnectionFactory.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SUM_TOTAL_ISSUED_BETWEEN)) {
+
+            ps.setTimestamp(1, ts(from));
+            ps.setTimestamp(2, ts(to));
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getBigDecimal(1) : BigDecimal.ZERO;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return BigDecimal.ZERO;
         }
     }
 
