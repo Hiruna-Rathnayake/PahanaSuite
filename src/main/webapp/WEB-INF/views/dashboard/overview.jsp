@@ -22,7 +22,7 @@
         <div class="kpi-card">
             <div class="kpi-label">Bills this Month</div>
             <div class="kpi-value"><%= request.getAttribute("kpiMonthlySales") == null ? 0 : request.getAttribute("kpiMonthlySales") %></div>
-            <div class="kpi-foot"><a href="#">View report</a></div>
+            <div class="kpi-foot"><a href="${pageContext.request.contextPath}/dashboard/reports?period=monthly">View report</a></div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Total Customers</div>

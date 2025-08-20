@@ -16,6 +16,8 @@
                href="${pageContext.request.contextPath}/dashboard/sales">Sales</a></li>
         <li><a class="<%= "bills".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/bills">Bills</a></li>
+        <li><a class="<%= "reports".equals(currentSection) ? "active" : "" %>"
+               href="${pageContext.request.contextPath}/dashboard/reports">Reports</a></li>
         <li><a class="<%= "settings".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/settings">Settings</a></li>
     </ul>
