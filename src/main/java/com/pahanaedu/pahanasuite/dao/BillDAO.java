@@ -4,6 +4,7 @@ import com.pahanaedu.pahanasuite.models.Bill;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 public interface BillDAO {
 
@@ -37,4 +38,7 @@ public interface BillDAO {
 
     /** Counts bills issued between [from, to). */
     int countIssuedBetween(LocalDateTime from, LocalDateTime to);
+
+    /** Sums total field of bills issued between [from, to). */
+    BigDecimal sumTotalIssuedBetween(LocalDateTime from, LocalDateTime to);
 }
