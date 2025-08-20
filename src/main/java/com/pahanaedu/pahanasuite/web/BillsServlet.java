@@ -114,7 +114,7 @@ public class BillsServlet extends HttpServlet {
             case "refund" -> {
                 BigDecimal amount = parseDecimal(req.getParameter("refundAmount"));
                 String ref = trim(req.getParameter("reference"));
-                if (id > 0) {
+                if (id > 0 && amount != null) {
                     var payment = paymentService.refund(id, amount, ref);
                     if (payment != null) {
                         Bill bill = billDAO.findById(id);
@@ -129,6 +129,8 @@ public class BillsServlet extends HttpServlet {
                     } else {
                         session.setAttribute("flash", "Refund failed.");
                     }
+                } else {
+                    session.setAttribute("flash", "Refund failed.");
                 }
             }
             default -> {
