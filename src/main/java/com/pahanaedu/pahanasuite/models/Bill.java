@@ -1,4 +1,3 @@
-// src/main/java/com/pahanaedu/pahanasuite/models/Bill.java
 package com.pahanaedu.pahanasuite.models;
 
 import java.math.BigDecimal;
