@@ -20,6 +20,8 @@
                href="${pageContext.request.contextPath}/dashboard/reports">Reports</a></li>
         <li><a class="<%= "settings".equals(currentSection) ? "active" : "" %>"
                href="${pageContext.request.contextPath}/dashboard/settings">Settings</a></li>
+        <li><a class="<%= "help".equals(currentSection) ? "active" : "" %>"
+               href="${pageContext.request.contextPath}/dashboard/help">Help</a></li>
     </ul>
 </nav>
 

@@ -603,3 +603,9 @@ form[style*="display:flex"] {
     text-transform: uppercase;
     letter-spacing: 0.025em;
 }
+
+/* Allow scrolling on the dedicated help page without affecting other sections */
+.help-section .panel-body {
+    flex: 1;
+    overflow-y: auto;
+}
