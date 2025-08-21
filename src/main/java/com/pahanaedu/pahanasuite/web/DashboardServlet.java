@@ -146,10 +146,11 @@ public class DashboardServlet extends HttpServlet {
             return section;
         }
         if ("cashier".equalsIgnoreCase(userRole)) {
-            // Allow cashiers to see bills + customers + sales
+            // Allow cashiers to see bills + customers + sales + help
             if ("sales".equalsIgnoreCase(section) ||
                     "customers".equalsIgnoreCase(section) ||
-                    "bills".equalsIgnoreCase(section)) {
+                    "bills".equalsIgnoreCase(section) ||
+                    "help".equalsIgnoreCase(section)) {
                 return section;
             }
             return "sales";
