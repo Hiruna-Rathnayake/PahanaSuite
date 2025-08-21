@@ -198,7 +198,7 @@ body {
     position: fixed;
     bottom: 0;
     left: 0;
-    width: 100%;
+    right: 0;
     border-top: 1px solid #0b1220;
     z-index: 100;
 }

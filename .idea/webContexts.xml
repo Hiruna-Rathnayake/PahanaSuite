@@ -4,6 +4,7 @@
     <option name="state">
       <map>
         <entry key="file://$PROJECT_DIR$/src/main/webapp/WEB-INF/views/components/loading-spinner.jsp" value="file://$PROJECT_DIR$/src/main/webapp/WEB-INF/views/components" />
+        <entry key="file://$PROJECT_DIR$/src/main/webapp/WEB-INF/views/dashboard/sales.jsp" value="file://$PROJECT_DIR$/src/main/webapp/WEB-INF/views/dashboard" />
         <entry key="file://$PROJECT_DIR$/src/main/webapp/WEB-INF/views/dashboard/users.jsp" value="file://$PROJECT_DIR$/src/main/webapp/WEB-INF/views/dashboard" />
         <entry key="file://$PROJECT_DIR$/src/main/webapp/dashboard.jsp" value="file://$PROJECT_DIR$/src/main/webapp" />
       </map>
